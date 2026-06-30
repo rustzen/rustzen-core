@@ -155,7 +155,10 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn from_defaults(defaults: RuntimeDefaults) -> Self {
-        let layout = RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
+        let layout = RuntimeLayout::new(
+            format!(".{}", defaults.product_slug),
+            defaults.files_prefix,
+        );
         let sqlite_path = defaults
             .sqlite_path
             .map(|value| layout.resolve_runtime_path(value))
@@ -293,7 +296,11 @@ impl EnvFileError {
 
 impl fmt::Display for EnvFileError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "invalid env file line {}: {}", self.line, self.message)
+        write!(
+            formatter,
+            "invalid env file line {}: {}",
+            self.line, self.message
+        )
     }
 }
 
@@ -443,6 +450,9 @@ mod tests {
             EnvFileEntry::new("RUSTZEN_APP_PORT", "9880"),
             EnvFileEntry::new("RUSTZEN_RUNTIME_ROOT", "."),
         ]);
-        assert_eq!(rendered, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
+        assert_eq!(
+            rendered,
+            "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n"
+        );
     }
 }
