@@ -1,6 +1,8 @@
 [package]
 name = "rz-cli"
 version = "0.1.0"
+description = "Shared Rustzen CLI helpers for output, verbosity, toggle flags, and config discovery."
+publish = false
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
