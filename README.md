@@ -2,17 +2,17 @@
 
 Rustzen Core is the shared Rust capability workspace for Rustzen products.
 
-It now contains executable reusable crates instead of only planning notes. Code here must stay product-neutral and must be useful to at least two Rustzen products before it is moved in.
+It contains executable reusable crates instead of only planning notes. Code here must stay product-neutral and must be useful to at least two Rustzen products before it is moved in.
 
 ## Crates
 
 | Crate | Scope |
 |---|---|
-| `rz-core` | API envelopes, shared error primitives, stable hashing, SQLite helpers. |
-| `rz-config` | Runtime directory layout and primitive environment parsing. |
-| `rz-fs` | Filesystem walking, size/count stats, safe removal, directory creation, path containment. |
-| `rz-cli` | CLI output mode, verbosity, top-level command error handling, JSON config discovery. |
-| `rz-platform` | `/opt/rustzen-*` service layout and systemd service rendering. |
+| `rz-core` | API envelopes, shared error primitives, stable hashing, SQLite helpers, SQLite maintenance, and tracing/logging helpers. |
+| `rz-config` | Runtime directory layout, primitive environment parsing, and `app.env` parsing/rendering. |
+| `rz-fs` | Filesystem walking, size/count stats, safe removal, directory creation, path containment, and copy helpers. |
+| `rz-cli` | CLI output mode, verbosity, top-level command error handling, JSON config discovery, and toggle resolution. |
+| `rz-platform` | `/opt/rustzen-*` service layout, systemd service rendering, resource limits, and deployment plan rendering. |
 
 ## Standards
 
