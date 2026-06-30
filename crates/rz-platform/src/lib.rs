@@ -49,6 +49,44 @@ impl ServiceLayout {
     }
 }
 
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct ResourceLimits {
+    pub memory_high: Option<String>,
+    pub memory_max: Option<String>,
+    pub cpu_quota: Option<String>,
+    pub tasks_max: Option<u64>,
+    pub limit_nofile: Option<u64>,
+}
+
+impl ResourceLimits {
+    pub fn new() -> Self { Self::default() }
+
+    pub fn memory_high(mut self, value: impl Into<String>) -> Self {
+        self.memory_high = Some(value.into());
+        self
+    }
+
+    pub fn memory_max(mut self, value: impl Into<String>) -> Self {
+        self.memory_max = Some(value.into());
+        self
+    }
+
+    pub fn cpu_quota(mut self, value: impl Into<String>) -> Self {
+        self.cpu_quota = Some(value.into());
+        self
+    }
+
+    pub fn tasks_max(mut self, value: u64) -> Self {
+        self.tasks_max = Some(value);
+        self
+    }
+
+    pub fn limit_nofile(mut self, value: u64) -> Self {
+        self.limit_nofile = Some(value);
+        self
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SystemdService {
     pub name: String,
@@ -61,11 +99,7 @@ pub struct SystemdService {
     pub group: Option<String>,
     pub restart: String,
     pub restart_sec: u64,
-    pub memory_high: Option<String>,
-    pub memory_max: Option<String>,
-    pub cpu_quota: Option<String>,
-    pub tasks_max: Option<u64>,
-    pub limit_nofile: Option<u64>,
+    pub resource_limits: ResourceLimits,
     pub no_new_privileges: bool,
     pub private_tmp: bool,
 }
@@ -93,11 +127,7 @@ impl SystemdService {
             group: None,
             restart: "always".to_string(),
             restart_sec: 5,
-            memory_high: None,
-            memory_max: None,
-            cpu_quota: None,
-            tasks_max: None,
-            limit_nofile: None,
+            resource_limits: ResourceLimits::default(),
             no_new_privileges: false,
             private_tmp: false,
         }
@@ -114,19 +144,8 @@ impl SystemdService {
         self
     }
 
-    pub fn with_resource_limits(
-        mut self,
-        memory_high: Option<impl Into<String>>,
-        memory_max: Option<impl Into<String>>,
-        cpu_quota: Option<impl Into<String>>,
-        tasks_max: Option<u64>,
-        limit_nofile: Option<u64>,
-    ) -> Self {
-        self.memory_high = memory_high.map(Into::into);
-        self.memory_max = memory_max.map(Into::into);
-        self.cpu_quota = cpu_quota.map(Into::into);
-        self.tasks_max = tasks_max;
-        self.limit_nofile = limit_nofile;
+    pub fn with_resource_limits(mut self, limits: ResourceLimits) -> Self {
+        self.resource_limits = limits;
         self
     }
 
@@ -155,11 +174,11 @@ impl SystemdService {
         output.push_str(&format!("WorkingDirectory={}\n", self.working_directory.display()));
         output.push_str(&format!("Restart={}\n", self.restart));
         output.push_str(&format!("RestartSec={}\n", self.restart_sec));
-        if let Some(memory_high) = &self.memory_high { output.push_str(&format!("MemoryHigh={memory_high}\n")); }
-        if let Some(memory_max) = &self.memory_max { output.push_str(&format!("MemoryMax={memory_max}\n")); }
-        if let Some(cpu_quota) = &self.cpu_quota { output.push_str(&format!("CPUQuota={cpu_quota}\n")); }
-        if let Some(tasks_max) = self.tasks_max { output.push_str(&format!("TasksMax={tasks_max}\n")); }
-        if let Some(limit_nofile) = self.limit_nofile { output.push_str(&format!("LimitNOFILE={limit_nofile}\n")); }
+        if let Some(memory_high) = &self.resource_limits.memory_high { output.push_str(&format!("MemoryHigh={memory_high}\n")); }
+        if let Some(memory_max) = &self.resource_limits.memory_max { output.push_str(&format!("MemoryMax={memory_max}\n")); }
+        if let Some(cpu_quota) = &self.resource_limits.cpu_quota { output.push_str(&format!("CPUQuota={cpu_quota}\n")); }
+        if let Some(tasks_max) = self.resource_limits.tasks_max { output.push_str(&format!("TasksMax={tasks_max}\n")); }
+        if let Some(limit_nofile) = self.resource_limits.limit_nofile { output.push_str(&format!("LimitNOFILE={limit_nofile}\n")); }
         if self.no_new_privileges { output.push_str("NoNewPrivileges=true\n"); }
         if self.private_tmp { output.push_str("PrivateTmp=true\n"); }
         output.push_str("\n[Install]\n");
@@ -181,7 +200,7 @@ pub fn render_env_file(entries: impl IntoIterator<Item = (impl AsRef<str>, impl 
 
 #[cfg(test)]
 mod tests {
-    use super::{ServiceLayout, SystemdService, render_env_file};
+    use super::{ResourceLimits, ServiceLayout, SystemdService, render_env_file};
     use std::path::PathBuf;
 
     #[test]
@@ -204,12 +223,16 @@ mod tests {
     #[test]
     fn systemd_render_has_required_fields() {
         let layout = ServiceLayout::for_product("rustzen-admin");
+        let limits = ResourceLimits::new().memory_high("4G").memory_max("6G").cpu_quota("300%");
         let service = SystemdService::for_layout(&layout, "rustzen-admin")
             .with_security(true, true)
+            .with_resource_limits(limits)
             .render();
         assert!(service.contains("EnvironmentFile=/opt/rustzen-admin/config/app.env"));
         assert!(service.contains("ExecStart=/opt/rustzen-admin/bin/rustzen-admin"));
         assert!(service.contains("Restart=always"));
+        assert!(service.contains("MemoryHigh=4G"));
+        assert!(service.contains("CPUQuota=300%"));
         assert!(service.contains("NoNewPrivileges=true"));
         assert!(service.contains("PrivateTmp=true"));
     }
