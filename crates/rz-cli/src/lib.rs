@@ -102,7 +102,13 @@ impl CliOutput {
     ) -> Self {
         Self {
             format: OutputFormat::from_json_flag(json),
-            verbosity: Verbosity::resolve(quiet, no_quiet, verbose, no_verbose, Verbosity::Normal),
+            verbosity: Verbosity::resolve(
+                quiet,
+                no_quiet,
+                verbose,
+                no_verbose,
+                Verbosity::Normal,
+            ),
         }
     }
 
