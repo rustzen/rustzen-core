@@ -31,6 +31,13 @@ pub enum RemoveOutcome {
     DirectoryRemoved,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum CopyOutcome {
+    Copied,
+    SkippedMissingPolicy,
+    SkippedUnchanged,
+}
+
 pub fn collect_path_stats(path: impl AsRef<Path>) -> io::Result<PathStats> {
     collect_path_stats_with_options(path, WalkOptions::default())
 }
@@ -87,8 +94,29 @@ pub fn remove_path(path: impl AsRef<Path>) -> io::Result<RemoveOutcome> {
     }
 }
 
+pub fn remove_paths<I, P>(paths: I) -> io::Result<Vec<RemoveOutcome>>
+where
+    I: IntoIterator<Item = P>,
+    P: AsRef<Path>,
+{
+    let mut outcomes = Vec::new();
+    for path in paths {
+        outcomes.push(remove_path(path)?);
+    }
+    Ok(outcomes)
+}
+
 pub fn ensure_dir(path: impl AsRef<Path>) -> io::Result<()> {
     fs::create_dir_all(path)
+}
+
+pub fn ensure_parent_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    if let Some(parent) = path.as_ref().parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    Ok(())
 }
 
 pub fn ensure_dirs<I, P>(dirs: I) -> io::Result<()>
@@ -100,6 +128,39 @@ where
         ensure_dir(dir)?;
     }
     Ok(())
+}
+
+pub fn copy_if_missing(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Result<CopyOutcome> {
+    let src = src.as_ref();
+    let dest = dest.as_ref();
+    if dest.exists() {
+        return Ok(CopyOutcome::SkippedMissingPolicy);
+    }
+    ensure_parent_dir(dest)?;
+    fs::copy(src, dest)?;
+    Ok(CopyOutcome::Copied)
+}
+
+pub fn copy_if_different(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Result<CopyOutcome> {
+    let src = src.as_ref();
+    let dest = dest.as_ref();
+    if dest.exists() && files_equal(src, dest)? {
+        return Ok(CopyOutcome::SkippedUnchanged);
+    }
+    ensure_parent_dir(dest)?;
+    fs::copy(src, dest)?;
+    Ok(CopyOutcome::Copied)
+}
+
+pub fn files_equal(left: impl AsRef<Path>, right: impl AsRef<Path>) -> io::Result<bool> {
+    let left = left.as_ref();
+    let right = right.as_ref();
+    let left_meta = fs::metadata(left)?;
+    let right_meta = fs::metadata(right)?;
+    if left_meta.len() != right_meta.len() {
+        return Ok(false);
+    }
+    Ok(fs::read(left)? == fs::read(right)?)
 }
 
 pub fn canonicalize_within(
@@ -116,14 +177,27 @@ pub fn canonicalize_within(
     }
 }
 
+pub fn normalize_slashes(path: impl AsRef<Path>) -> String {
+    path.as_ref().to_string_lossy().replace('\\', "/")
+}
+
+pub fn is_permission_denied(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::PermissionDenied
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{RemoveOutcome, remove_path};
+    use super::{RemoveOutcome, normalize_slashes, remove_path};
 
     #[test]
     fn remove_missing_path_is_not_found() {
         let path = std::env::temp_dir().join("rz-fs-missing-path");
         let outcome = remove_path(path).expect("remove missing path");
         assert_eq!(outcome, RemoveOutcome::NotFound);
+    }
+
+    #[test]
+    fn slash_normalization_is_stable() {
+        assert_eq!(normalize_slashes("a\\b\\c"), "a/b/c");
     }
 }
