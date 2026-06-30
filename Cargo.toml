@@ -1,0 +1,24 @@
+[workspace]
+members = [
+    "crates/rz-core",
+    "crates/rz-cli",
+    "crates/rz-config",
+    "crates/rz-fs",
+    "crates/rz-platform",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/rustzen/rustzen-core"
+homepage = "https://github.com/rustzen/rustzen-core"
+rust-version = "1.85"
+authors = ["Rustzen Contributors"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio-rustls", "migrate"] }
+thiserror = "2"
+walkdir = "2.5"
