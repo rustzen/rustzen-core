@@ -114,6 +114,22 @@ pub struct RuntimeConfig {
 }
 
 impl RuntimeConfig {
+    pub fn from_defaults(defaults: RuntimeDefaults) -> Self {
+        let layout = RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
+        let sqlite_path = defaults
+            .sqlite_path
+            .map(|value| layout.resolve_runtime_path(value))
+            .unwrap_or_else(|| layout.sqlite_path());
+
+        Self {
+            app_host: defaults.app_host,
+            app_port: defaults.app_port,
+            timezone: defaults.timezone,
+            sqlite_path,
+            layout,
+        }
+    }
+
     pub fn from_rustzen_env(defaults: RuntimeDefaults) -> Self {
         let runtime_root = EnvReader::string(
             "RUSTZEN_RUNTIME_ROOT",
@@ -231,10 +247,11 @@ mod tests {
     }
 
     #[test]
-    fn runtime_config_uses_defaults() {
-        let config = RuntimeConfig::from_rustzen_env(RuntimeDefaults::new("rustzen-admin", 9880));
+    fn runtime_config_uses_defaults_without_env() {
+        let config = RuntimeConfig::from_defaults(RuntimeDefaults::new("rustzen-admin", 9880));
         assert_eq!(config.app_host, "0.0.0.0");
         assert_eq!(config.app_port, 9880);
         assert_eq!(config.bind_addr(), "0.0.0.0:9880");
+        assert_eq!(config.layout.runtime_root_dir(), PathBuf::from(".rustzen-admin"));
     }
 }
