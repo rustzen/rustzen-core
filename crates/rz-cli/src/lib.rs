@@ -17,6 +17,16 @@ impl Default for OutputFormat {
     fn default() -> Self { Self::Text }
 }
 
+impl OutputFormat {
+    pub fn from_json_flag(json: bool) -> Self {
+        if json { Self::Json } else { Self::Text }
+    }
+
+    pub fn is_json(self) -> bool {
+        matches!(self, Self::Json)
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Verbosity {
     Quiet,
@@ -29,6 +39,22 @@ impl Default for Verbosity {
 }
 
 impl Verbosity {
+    pub fn resolve(quiet: bool, no_quiet: bool, verbose: bool, no_verbose: bool, default: Self) -> Self {
+        if no_quiet {
+            return Self::Normal;
+        }
+        if quiet {
+            return Self::Quiet;
+        }
+        if no_verbose {
+            return Self::Normal;
+        }
+        if verbose {
+            return Self::Verbose;
+        }
+        default
+    }
+
     pub fn allows_normal(self) -> bool {
         matches!(self, Self::Normal | Self::Verbose)
     }
@@ -47,6 +73,13 @@ pub struct CliOutput {
 impl CliOutput {
     pub fn new(format: OutputFormat, verbosity: Verbosity) -> Self {
         Self { format, verbosity }
+    }
+
+    pub fn from_flags(json: bool, quiet: bool, no_quiet: bool, verbose: bool, no_verbose: bool) -> Self {
+        Self {
+            format: OutputFormat::from_json_flag(json),
+            verbosity: Verbosity::resolve(quiet, no_quiet, verbose, no_verbose, Verbosity::Normal),
+        }
     }
 
     pub fn print_text(&self, line: impl Display) {
@@ -78,6 +111,28 @@ impl CliOutput {
             OutputFormat::Json => self.print_json(value),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct ToggleFlag {
+    pub enable: bool,
+    pub disable: bool,
+}
+
+impl ToggleFlag {
+    pub fn resolve(self, default: bool) -> bool {
+        if self.disable {
+            false
+        } else if self.enable {
+            true
+        } else {
+            default
+        }
+    }
+}
+
+pub fn resolve_toggle(enable: bool, disable: bool, default: bool) -> bool {
+    ToggleFlag { enable, disable }.resolve(default)
 }
 
 #[derive(Debug, Clone)]
@@ -162,7 +217,7 @@ pub fn print_error(error: impl Display) {
 
 #[cfg(test)]
 mod tests {
-    use super::{OutputFormat, Verbosity};
+    use super::{CliOutput, OutputFormat, ToggleFlag, Verbosity, resolve_toggle};
 
     #[test]
     fn verbosity_rules_are_stable() {
@@ -174,5 +229,18 @@ mod tests {
     #[test]
     fn default_output_is_text() {
         assert_eq!(OutputFormat::default(), OutputFormat::Text);
+    }
+
+    #[test]
+    fn output_flags_resolve_json_and_verbosity() {
+        let output = CliOutput::from_flags(true, false, false, true, false);
+        assert_eq!(output.format, OutputFormat::Json);
+        assert_eq!(output.verbosity, Verbosity::Verbose);
+    }
+
+    #[test]
+    fn disable_toggle_wins() {
+        assert!(!ToggleFlag { enable: true, disable: true }.resolve(true));
+        assert!(resolve_toggle(false, false, true));
     }
 }
