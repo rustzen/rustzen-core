@@ -27,48 +27,67 @@ impl ServiceLayout {
     pub fn product(&self) -> &str {
         &self.product
     }
+
     pub fn install_root(&self) -> &Path {
         &self.install_root
     }
+
     pub fn bin_dir(&self) -> PathBuf {
         self.install_root.join("bin")
     }
+
     pub fn bin_path(&self, binary_name: &str) -> PathBuf {
         self.bin_dir().join(binary_name)
     }
+
     pub fn config_dir(&self) -> PathBuf {
         self.install_root.join("config")
     }
+
     pub fn env_file(&self) -> PathBuf {
         self.config_dir().join("app.env")
     }
+
     pub fn data_dir(&self) -> PathBuf {
         self.install_root.join("data")
     }
+
     pub fn db_dir(&self) -> PathBuf {
         self.data_dir().join("db")
     }
+
     pub fn uploads_dir(&self) -> PathBuf {
         self.data_dir().join("uploads")
     }
+
     pub fn avatars_dir(&self) -> PathBuf {
         self.data_dir().join("avatars")
     }
+
     pub fn logs_dir(&self) -> PathBuf {
         self.install_root.join("logs")
     }
+
     pub fn systemd_dir(&self) -> PathBuf {
         self.install_root.join("systemd")
     }
+
     pub fn service_file_name(&self) -> String {
         format!("{}.service", self.product)
     }
+
     pub fn service_file_path(&self) -> PathBuf {
         self.systemd_dir().join(self.service_file_name())
     }
+
+    pub fn systemd_unit_path(&self) -> PathBuf {
+        PathBuf::from("/etc/systemd/system").join(self.service_file_name())
+    }
+
     pub fn web_dir(&self) -> PathBuf {
         self.install_root.join("web")
     }
+
     pub fn web_dist_dir(&self) -> PathBuf {
         self.web_dir().join("dist")
     }
@@ -248,6 +267,50 @@ impl SystemdService {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DeploymentPlan {
+    pub layout: ServiceLayout,
+    pub service: SystemdService,
+    pub env_entries: Vec<(String, String)>,
+}
+
+impl DeploymentPlan {
+    pub fn new(layout: ServiceLayout, binary_name: &str) -> Self {
+        let service = SystemdService::for_layout(&layout, binary_name);
+        Self {
+            layout,
+            service,
+            env_entries: Vec::new(),
+        }
+    }
+
+    pub fn with_service(mut self, service: SystemdService) -> Self {
+        self.service = service;
+        self
+    }
+
+    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env_entries.push((key.into(), value.into()));
+        self
+    }
+
+    pub fn render_env_file(&self) -> String {
+        render_env_file(
+            self.env_entries
+                .iter()
+                .map(|(key, value)| (key.as_str(), value.as_str())),
+        )
+    }
+
+    pub fn render_service_file(&self) -> String {
+        self.service.render()
+    }
+
+    pub fn required_dirs(&self) -> Vec<PathBuf> {
+        self.layout.required_dirs()
+    }
+}
+
 pub fn render_env_file(
     entries: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
 ) -> String {
@@ -263,7 +326,7 @@ pub fn render_env_file(
 
 #[cfg(test)]
 mod tests {
-    use super::{ResourceLimits, ServiceLayout, SystemdService, render_env_file};
+    use super::{DeploymentPlan, ResourceLimits, ServiceLayout, SystemdService, render_env_file};
     use std::path::PathBuf;
 
     #[test]
@@ -278,6 +341,10 @@ mod tests {
             PathBuf::from("/opt/rustzen-admin/config/app.env")
         );
         assert_eq!(layout.service_file_name(), "rustzen-admin.service");
+        assert_eq!(
+            layout.systemd_unit_path(),
+            PathBuf::from("/etc/systemd/system/rustzen-admin.service")
+        );
     }
 
     #[test]
@@ -313,5 +380,21 @@ mod tests {
     fn env_file_renderer_is_stable() {
         let env = render_env_file([("RUSTZEN_APP_PORT", "9880"), ("RUSTZEN_RUNTIME_ROOT", ".")]);
         assert_eq!(env, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
+    }
+
+    #[test]
+    fn deployment_plan_renders_env_and_service() {
+        let plan = DeploymentPlan::new(ServiceLayout::for_product("rustzen-admin"), "rustzen-admin")
+            .with_env("RUSTZEN_RUNTIME_ROOT", ".")
+            .with_env("RUSTZEN_APP_PORT", "9880");
+        assert!(
+            plan.render_service_file()
+                .contains("ExecStart=/opt/rustzen-admin/bin/rustzen-admin")
+        );
+        assert_eq!(
+            plan.render_env_file(),
+            "RUSTZEN_RUNTIME_ROOT=.\nRUSTZEN_APP_PORT=9880\n"
+        );
+        assert!(plan.required_dirs().contains(&PathBuf::from("/opt/rustzen-admin/config")));
     }
 }
