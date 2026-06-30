@@ -1,0 +1,13 @@
+[package]
+name = "rz-platform"
+version = "0.1.0"
+description = "Shared Rustzen platform helpers for service layouts and systemd rendering."
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+
+[dependencies]
