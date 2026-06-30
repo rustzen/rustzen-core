@@ -1,7 +1,7 @@
 [package]
 name = "rz-core"
 version = "0.1.0"
-description = "Shared Rustzen core primitives: API envelopes, errors, hashing, and SQLite helpers."
+description = "Shared Rustzen core primitives: API envelopes, errors, hashing, SQLite, maintenance, and logging helpers."
 publish = false
 edition.workspace = true
 license.workspace = true
