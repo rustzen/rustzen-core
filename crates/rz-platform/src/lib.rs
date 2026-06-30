@@ -21,24 +21,30 @@ impl ServiceLayout {
     pub fn product(&self) -> &str { &self.product }
     pub fn install_root(&self) -> &Path { &self.install_root }
     pub fn bin_dir(&self) -> PathBuf { self.install_root.join("bin") }
+    pub fn bin_path(&self, binary_name: &str) -> PathBuf { self.bin_dir().join(binary_name) }
     pub fn config_dir(&self) -> PathBuf { self.install_root.join("config") }
     pub fn env_file(&self) -> PathBuf { self.config_dir().join("app.env") }
     pub fn data_dir(&self) -> PathBuf { self.install_root.join("data") }
     pub fn db_dir(&self) -> PathBuf { self.data_dir().join("db") }
+    pub fn uploads_dir(&self) -> PathBuf { self.data_dir().join("uploads") }
+    pub fn avatars_dir(&self) -> PathBuf { self.data_dir().join("avatars") }
     pub fn logs_dir(&self) -> PathBuf { self.install_root.join("logs") }
     pub fn systemd_dir(&self) -> PathBuf { self.install_root.join("systemd") }
-    pub fn web_dist_dir(&self) -> PathBuf { self.install_root.join("web").join("dist") }
+    pub fn service_file_name(&self) -> String { format!("{}.service", self.product) }
+    pub fn service_file_path(&self) -> PathBuf { self.systemd_dir().join(self.service_file_name()) }
+    pub fn web_dir(&self) -> PathBuf { self.install_root.join("web") }
+    pub fn web_dist_dir(&self) -> PathBuf { self.web_dir().join("dist") }
 
     pub fn required_dirs(&self) -> Vec<PathBuf> {
         vec![
             self.bin_dir(),
             self.config_dir(),
             self.db_dir(),
-            self.data_dir().join("uploads"),
-            self.data_dir().join("avatars"),
+            self.uploads_dir(),
+            self.avatars_dir(),
             self.logs_dir(),
             self.systemd_dir(),
-            self.install_root.join("web"),
+            self.web_dir(),
         ]
     }
 }
@@ -60,14 +66,25 @@ pub struct SystemdService {
     pub cpu_quota: Option<String>,
     pub tasks_max: Option<u64>,
     pub limit_nofile: Option<u64>,
+    pub no_new_privileges: bool,
+    pub private_tmp: bool,
 }
 
 impl SystemdService {
     pub fn new(name: impl Into<String>, exec_start: impl Into<PathBuf>) -> Self {
         let name = name.into();
         let layout = ServiceLayout::for_product(name.as_str());
+        Self::for_layout_with_exec(&layout, exec_start)
+    }
+
+    pub fn for_layout(layout: &ServiceLayout, binary_name: &str) -> Self {
+        Self::for_layout_with_exec(layout, layout.bin_path(binary_name))
+    }
+
+    pub fn for_layout_with_exec(layout: &ServiceLayout, exec_start: impl Into<PathBuf>) -> Self {
         Self {
-            description: name.clone(),
+            name: layout.product().to_string(),
+            description: layout.product().to_string(),
             exec_start: exec_start.into(),
             working_directory: layout.install_root().to_path_buf(),
             environment_file: Some(layout.env_file()),
@@ -81,12 +98,9 @@ impl SystemdService {
             cpu_quota: None,
             tasks_max: None,
             limit_nofile: None,
-            name,
+            no_new_privileges: false,
+            private_tmp: false,
         }
-    }
-
-    pub fn for_layout(layout: &ServiceLayout, binary_name: &str) -> Self {
-        Self::new(layout.product(), layout.bin_dir().join(binary_name))
     }
 
     pub fn with_user_group(mut self, user: impl Into<String>, group: impl Into<String>) -> Self {
@@ -97,6 +111,28 @@ impl SystemdService {
 
     pub fn with_environment(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.environment.push((key.into(), value.into()));
+        self
+    }
+
+    pub fn with_resource_limits(
+        mut self,
+        memory_high: Option<impl Into<String>>,
+        memory_max: Option<impl Into<String>>,
+        cpu_quota: Option<impl Into<String>>,
+        tasks_max: Option<u64>,
+        limit_nofile: Option<u64>,
+    ) -> Self {
+        self.memory_high = memory_high.map(Into::into);
+        self.memory_max = memory_max.map(Into::into);
+        self.cpu_quota = cpu_quota.map(Into::into);
+        self.tasks_max = tasks_max;
+        self.limit_nofile = limit_nofile;
+        self
+    }
+
+    pub fn with_security(mut self, no_new_privileges: bool, private_tmp: bool) -> Self {
+        self.no_new_privileges = no_new_privileges;
+        self.private_tmp = private_tmp;
         self
     }
 
@@ -124,15 +160,28 @@ impl SystemdService {
         if let Some(cpu_quota) = &self.cpu_quota { output.push_str(&format!("CPUQuota={cpu_quota}\n")); }
         if let Some(tasks_max) = self.tasks_max { output.push_str(&format!("TasksMax={tasks_max}\n")); }
         if let Some(limit_nofile) = self.limit_nofile { output.push_str(&format!("LimitNOFILE={limit_nofile}\n")); }
+        if self.no_new_privileges { output.push_str("NoNewPrivileges=true\n"); }
+        if self.private_tmp { output.push_str("PrivateTmp=true\n"); }
         output.push_str("\n[Install]\n");
         output.push_str("WantedBy=multi-user.target\n");
         output
     }
 }
 
+pub fn render_env_file(entries: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>) -> String {
+    let mut output = String::new();
+    for (key, value) in entries {
+        output.push_str(key.as_ref());
+        output.push('=');
+        output.push_str(value.as_ref());
+        output.push('\n');
+    }
+    output
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ServiceLayout, SystemdService};
+    use super::{ServiceLayout, SystemdService, render_env_file};
     use std::path::PathBuf;
 
     #[test]
@@ -140,14 +189,34 @@ mod tests {
         let layout = ServiceLayout::for_product("rustzen-admin");
         assert_eq!(layout.install_root().to_path_buf(), PathBuf::from("/opt/rustzen-admin"));
         assert_eq!(layout.env_file(), PathBuf::from("/opt/rustzen-admin/config/app.env"));
+        assert_eq!(layout.service_file_name(), "rustzen-admin.service");
+    }
+
+    #[test]
+    fn custom_layout_is_preserved_in_systemd_render() {
+        let layout = ServiceLayout::new("rustzen-admin", "/srv/rustzen-admin");
+        let service = SystemdService::for_layout(&layout, "rustzen-admin").render();
+        assert!(service.contains("EnvironmentFile=/srv/rustzen-admin/config/app.env"));
+        assert!(service.contains("ExecStart=/srv/rustzen-admin/bin/rustzen-admin"));
+        assert!(service.contains("WorkingDirectory=/srv/rustzen-admin"));
     }
 
     #[test]
     fn systemd_render_has_required_fields() {
         let layout = ServiceLayout::for_product("rustzen-admin");
-        let service = SystemdService::for_layout(&layout, "rustzen-admin").render();
+        let service = SystemdService::for_layout(&layout, "rustzen-admin")
+            .with_security(true, true)
+            .render();
         assert!(service.contains("EnvironmentFile=/opt/rustzen-admin/config/app.env"));
         assert!(service.contains("ExecStart=/opt/rustzen-admin/bin/rustzen-admin"));
         assert!(service.contains("Restart=always"));
+        assert!(service.contains("NoNewPrivileges=true"));
+        assert!(service.contains("PrivateTmp=true"));
+    }
+
+    #[test]
+    fn env_file_renderer_is_stable() {
+        let env = render_env_file([("RUSTZEN_APP_PORT", "9880"), ("RUSTZEN_RUNTIME_ROOT", ".")]);
+        assert_eq!(env, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
     }
 }
