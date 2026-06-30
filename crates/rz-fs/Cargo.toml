@@ -1,6 +1,8 @@
 [package]
 name = "rz-fs"
 version = "0.1.0"
+description = "Shared Rustzen filesystem helpers for walking, stats, copying, removal, and containment."
+publish = false
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
