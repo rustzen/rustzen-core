@@ -25,7 +25,11 @@ impl Default for OutputFormat {
 
 impl OutputFormat {
     pub fn from_json_flag(json: bool) -> Self {
-        if json { Self::Json } else { Self::Text }
+        if json {
+            Self::Json
+        } else {
+            Self::Text
+        }
     }
 
     pub fn is_json(self) -> bool {
@@ -267,13 +271,11 @@ mod tests {
 
     #[test]
     fn disable_toggle_wins() {
-        assert!(
-            !ToggleFlag {
-                enable: true,
-                disable: true
-            }
-            .resolve(true)
-        );
+        let toggle = ToggleFlag {
+            enable: true,
+            disable: true,
+        };
+        assert!(!toggle.resolve(true));
         assert!(resolve_toggle(false, false, true));
     }
 }
