@@ -378,7 +378,10 @@ mod tests {
 
     #[test]
     fn env_file_renderer_is_stable() {
-        let env = render_env_file([("RUSTZEN_APP_PORT", "9880"), ("RUSTZEN_RUNTIME_ROOT", ".")]);
+        let env = render_env_file([
+            ("RUSTZEN_APP_PORT", "9880"),
+            ("RUSTZEN_RUNTIME_ROOT", "."),
+        ]);
         assert_eq!(env, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
     }
 
@@ -395,6 +398,9 @@ mod tests {
             plan.render_env_file(),
             "RUSTZEN_RUNTIME_ROOT=.\nRUSTZEN_APP_PORT=9880\n"
         );
-        assert!(plan.required_dirs().contains(&PathBuf::from("/opt/rustzen-admin/config")));
+        assert!(
+            plan.required_dirs()
+                .contains(&PathBuf::from("/opt/rustzen-admin/config"))
+        );
     }
 }
