@@ -18,6 +18,10 @@ pub mod api {
             Self { code: 0, message: "Success".to_string(), data, total }
         }
 
+        pub fn with_message(data: T, message: impl Into<String>, total: Option<i64>) -> Self {
+            Self { code: 0, message: message.into(), data, total }
+        }
+
         pub fn success(data: T) -> Self {
             Self::new(data, None)
         }
@@ -65,6 +69,24 @@ pub mod api {
             ErrorEnvelope::new(self.code, self.message.clone())
         }
     }
+
+    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    pub struct Pagination {
+        pub page: i64,
+        pub page_size: i64,
+        pub limit: i64,
+        pub offset: i64,
+    }
+
+    impl Pagination {
+        pub fn normalize(page: Option<i64>, page_size: Option<i64>, default_size: i64, max_size: i64) -> Self {
+            let page = page.unwrap_or(1).max(1);
+            let default_size = default_size.clamp(1, max_size.max(1));
+            let page_size = page_size.unwrap_or(default_size).clamp(1, max_size.max(1));
+            let offset = (page - 1) * page_size;
+            Self { page, page_size, limit: page_size, offset }
+        }
+    }
 }
 
 pub mod error {
@@ -72,6 +94,10 @@ pub mod error {
     pub enum CoreError {
         #[error("invalid input: {0}")]
         InvalidInput(String),
+        #[error("not found: {0}")]
+        NotFound(String),
+        #[error("conflict: {0}")]
+        Conflict(String),
         #[error("io error: {0}")]
         Io(#[from] std::io::Error),
         #[error("sqlite error: {0}")]
@@ -108,6 +134,8 @@ pub mod sqlite {
 
     use crate::error::CoreError;
 
+    pub const SQLITE_MEMORY: &str = ":memory:";
+
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     pub enum SqliteTuningProfile {
         Minimal,
@@ -131,6 +159,50 @@ pub mod sqlite {
         pub foreign_keys: bool,
     }
 
+    impl SqlitePoolConfig {
+        pub fn minimal() -> Self {
+            Self { tuning_profile: SqliteTuningProfile::Minimal, ..Self::default() }
+        }
+
+        pub fn service() -> Self {
+            Self { tuning_profile: SqliteTuningProfile::Service, ..Self::default() }
+        }
+
+        pub fn read_optimized() -> Self {
+            Self { tuning_profile: SqliteTuningProfile::ReadOptimized, ..Self::default() }
+        }
+
+        pub fn agent() -> Self {
+            Self { tuning_profile: SqliteTuningProfile::Agent, max_connections: 5, ..Self::default() }
+        }
+
+        pub fn with_pool_size(mut self, min_connections: u32, max_connections: u32) -> Self {
+            self.min_connections = min_connections;
+            self.max_connections = max_connections.max(min_connections);
+            self
+        }
+
+        pub fn with_acquire_timeout_secs(mut self, seconds: u64) -> Self {
+            self.acquire_timeout = Duration::from_secs(seconds);
+            self
+        }
+
+        pub fn with_idle_timeout_secs(mut self, seconds: Option<u64>) -> Self {
+            self.idle_timeout = seconds.map(Duration::from_secs);
+            self
+        }
+
+        pub fn with_busy_timeout_secs(mut self, seconds: u64) -> Self {
+            self.busy_timeout = Duration::from_secs(seconds);
+            self
+        }
+
+        pub fn with_foreign_keys(mut self, enabled: bool) -> Self {
+            self.foreign_keys = enabled;
+            self
+        }
+    }
+
     impl Default for SqlitePoolConfig {
         fn default() -> Self {
             Self {
@@ -148,7 +220,7 @@ pub mod sqlite {
     pub fn database_url_from_path(path: impl AsRef<Path>) -> String {
         let path = path.as_ref();
         if let Some(raw) = path.to_str() {
-            if raw == ":memory:" || raw.starts_with("sqlite:") {
+            if raw == SQLITE_MEMORY || raw.starts_with("sqlite:") {
                 return raw.to_string();
             }
         }
@@ -192,6 +264,15 @@ pub mod sqlite {
     pub async fn run_incremental_vacuum(pool: &SqlitePool) -> Result<(), CoreError> {
         sqlx::query("PRAGMA incremental_vacuum").execute(pool).await?;
         Ok(())
+    }
+
+    pub async fn run_wal_checkpoint_truncate(pool: &SqlitePool) -> Result<(), CoreError> {
+        sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)").execute(pool).await?;
+        Ok(())
+    }
+
+    pub fn is_row_not_found(error: &sqlx::Error) -> bool {
+        matches!(error, sqlx::Error::RowNotFound)
     }
 
     pub fn ensure_database_directory(database_url: &str) -> Result<(), CoreError> {
@@ -240,7 +321,7 @@ pub mod sqlite {
 
     fn database_path_from_url(database_url: &str) -> Option<PathBuf> {
         let value = database_url.trim();
-        if value == ":memory:" || value == "sqlite::memory:" {
+        if value == SQLITE_MEMORY || value == "sqlite::memory:" {
             return None;
         }
         if let Some(path) = value.strip_prefix("sqlite://") {
@@ -256,18 +337,18 @@ pub mod sqlite {
     }
 }
 
-pub use api::{ApiResponse, ErrorEnvelope, HttpError};
+pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
 pub use error::CoreError;
 pub use hash::fnv1a64;
 pub use sqlite::{
-    SqlitePoolConfig, SqliteTuningProfile, connect_sqlite, connect_sqlite_with_config,
-    database_url_from_path, ensure_database_directory, run_incremental_vacuum, run_migrations,
-    test_connection,
+    SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite, connect_sqlite_with_config,
+    database_url_from_path, ensure_database_directory, is_row_not_found, run_incremental_vacuum,
+    run_migrations, run_wal_checkpoint_truncate, test_connection,
 };
 
 #[cfg(test)]
 mod tests {
-    use super::{ApiResponse, fnv1a64};
+    use super::{ApiResponse, Pagination, fnv1a64};
 
     #[test]
     fn fnv1a64_is_stable() {
@@ -279,5 +360,13 @@ mod tests {
         let response = ApiResponse::page(vec![1, 2], 2);
         assert_eq!(response.code, 0);
         assert_eq!(response.total, Some(2));
+    }
+
+    #[test]
+    fn pagination_normalizes_bounds() {
+        let page = Pagination::normalize(Some(0), Some(500), 10, 100);
+        assert_eq!(page.page, 1);
+        assert_eq!(page.page_size, 100);
+        assert_eq!(page.offset, 0);
     }
 }
