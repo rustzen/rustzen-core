@@ -93,7 +93,8 @@ pub fn default_filter() -> String {
 }
 
 pub fn init_logging(config: LoggingConfig) -> Result<(), LoggingError> {
-    let env_filter = EnvFilter::try_new(&config.env_filter).unwrap_or_else(|_| EnvFilter::new(default_filter()));
+    let env_filter = EnvFilter::try_new(&config.env_filter)
+        .unwrap_or_else(|_| EnvFilter::new(default_filter()));
 
     match config.target {
         LogTarget::Stdout => tracing_subscriber::fmt()
