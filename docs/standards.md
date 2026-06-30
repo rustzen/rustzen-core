@@ -14,7 +14,8 @@ Owns product-neutral primitives:
 - Framework-neutral HTTP error mapping.
 - Common error type for shared helpers.
 - Stable hashing helpers.
-- SQLite URL/path, pool, tuning, migration, connection test, and vacuum helpers.
+- SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers.
+- Tracing/logging initialization for stdout and append-only file targets.
 
 Does not own product database schemas, business queries, auth business rules, product-specific error variants, or localized messages.
 
@@ -26,7 +27,7 @@ Owns runtime and environment conventions:
 - `data`, `data/db`, `logs`, `web/dist`, `uploads`, and `avatars` paths.
 - Relative path resolution under runtime root.
 - Primitive env parsing.
-- Startup-only timezone setting helper.
+- `app.env` / `.env` parsing and rendering.
 
 Product repositories compose their own config structs using these primitives.
 
@@ -37,6 +38,8 @@ Owns filesystem primitives:
 - Recursive path statistics.
 - File or directory removal.
 - Directory creation.
+- Parent directory creation.
+- Copy-if-missing and copy-if-different helpers.
 - Canonical path containment checks.
 
 Product-specific scan rules, archive filters, cleanup policy, and safety allowlists stay local.
@@ -47,7 +50,8 @@ Owns CLI conventions:
 
 - Text/JSON output mode.
 - Quiet/normal/verbose behavior.
-- Top-level command error printing and exit.
+- Toggle resolution for paired positive/negative flags.
+- Top-level command error printing.
 - Config discovery from explicit path, `.rzrc`, `.rzrc.json`, and `package.json` field.
 
 Product subcommands and command-specific validation stay local.
@@ -59,8 +63,10 @@ Owns platform conventions:
 - `/opt/rustzen-*` install layout.
 - `config/app.env`, `bin`, `data/db`, `logs`, `systemd`, and `web/dist` paths.
 - systemd service rendering.
+- Resource limit rendering.
+- Deployment plan rendering for service files, env files, and required directories.
 
-Release signing, updater flow, Docker base images, and product packaging policy stay local.
+Release signing, updater flow, Docker base images, package extraction, and product packaging policy stay local.
 
 ## Adoption Rule
 
