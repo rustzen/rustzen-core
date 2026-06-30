@@ -79,18 +79,23 @@ pub mod api {
         pub fn bad_request(code: i32, message: impl Into<String>) -> Self {
             Self::new(400, code, message)
         }
+
         pub fn unauthorized(code: i32, message: impl Into<String>) -> Self {
             Self::new(401, code, message)
         }
+
         pub fn forbidden(code: i32, message: impl Into<String>) -> Self {
             Self::new(403, code, message)
         }
+
         pub fn not_found(code: i32, message: impl Into<String>) -> Self {
             Self::new(404, code, message)
         }
+
         pub fn conflict(code: i32, message: impl Into<String>) -> Self {
             Self::new(409, code, message)
         }
+
         pub fn internal(code: i32, message: impl Into<String>) -> Self {
             Self::new(500, code, message)
         }
@@ -115,9 +120,10 @@ pub mod api {
             default_size: i64,
             max_size: i64,
         ) -> Self {
+            let max_size = max_size.max(1);
             let page = page.unwrap_or(1).max(1);
-            let default_size = default_size.clamp(1, max_size.max(1));
-            let page_size = page_size.unwrap_or(default_size).clamp(1, max_size.max(1));
+            let default_size = default_size.clamp(1, max_size);
+            let page_size = page_size.unwrap_or(default_size).clamp(1, max_size);
             let offset = (page - 1) * page_size;
             Self {
                 page,
@@ -162,6 +168,9 @@ pub mod hash {
         hash
     }
 }
+
+pub mod logging;
+pub mod sqlite_maintenance;
 
 pub mod sqlite {
     use std::{
@@ -412,11 +421,17 @@ pub mod sqlite {
 pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
 pub use error::CoreError;
 pub use hash::fnv1a64;
+pub use logging::{LogFileConfig, LogTarget, LoggingConfig, LoggingError, init_logging};
 pub use sqlite::{
     SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite,
     connect_sqlite_with_config, database_url_from_path, ensure_database_directory,
     is_row_not_found, run_incremental_vacuum, run_migrations, run_wal_checkpoint_truncate,
     test_connection,
+};
+pub use sqlite_maintenance::{
+    SqliteMaintenancePlan, SqliteMaintenanceReport, SqlitePragmaSnapshot, WalCheckpointMode,
+    WalCheckpointResult, run_sqlite_incremental_vacuum, run_sqlite_maintenance,
+    run_sqlite_optimize, run_wal_checkpoint, sqlite_pragma_snapshot,
 };
 
 #[cfg(test)]
