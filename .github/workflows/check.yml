@@ -1,11 +1,7 @@
 name: check
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - feat/shared-capabilities
+  workflow_dispatch:
 
 jobs:
   cargo-check:
