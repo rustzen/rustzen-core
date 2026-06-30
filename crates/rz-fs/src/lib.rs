@@ -1,6 +1,10 @@
 //! Shared Rustzen filesystem helpers.
 
-use std::{fs, io, path::{Path, PathBuf}};
+use std::{
+    fs,
+    io::{self, Read},
+    path::{Path, PathBuf},
+};
 
 use walkdir::WalkDir;
 
@@ -160,7 +164,25 @@ pub fn files_equal(left: impl AsRef<Path>, right: impl AsRef<Path>) -> io::Resul
     if left_meta.len() != right_meta.len() {
         return Ok(false);
     }
-    Ok(fs::read(left)? == fs::read(right)?)
+
+    let mut left_file = fs::File::open(left)?;
+    let mut right_file = fs::File::open(right)?;
+    let mut left_buf = [0_u8; 8192];
+    let mut right_buf = [0_u8; 8192];
+
+    loop {
+        let left_read = left_file.read(&mut left_buf)?;
+        let right_read = right_file.read(&mut right_buf)?;
+        if left_read != right_read {
+            return Ok(false);
+        }
+        if left_read == 0 {
+            return Ok(true);
+        }
+        if left_buf[..left_read] != right_buf[..right_read] {
+            return Ok(false);
+        }
+    }
 }
 
 pub fn canonicalize_within(
