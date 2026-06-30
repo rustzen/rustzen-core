@@ -1,6 +1,9 @@
 //! Shared Rustzen runtime layout and environment helpers.
 
-use std::{env, path::{Component, Path, PathBuf}};
+use std::{
+    env,
+    path::{Component, Path, PathBuf},
+};
 
 pub const DEFAULT_FILES_PREFIX: &str = "/resources";
 pub const DEFAULT_SQLITE_FILE: &str = "rustzen.db";
@@ -15,24 +18,49 @@ pub struct RuntimeLayout {
 
 impl RuntimeLayout {
     pub fn new(runtime_root: impl Into<PathBuf>, files_prefix: impl Into<String>) -> Self {
-        Self { runtime_root: runtime_root.into(), files_prefix: normalize_prefix(files_prefix.into()) }
+        Self {
+            runtime_root: runtime_root.into(),
+            files_prefix: normalize_prefix(files_prefix.into()),
+        }
     }
 
     pub fn for_product(product_slug: &str) -> Self {
         Self::new(format!(".{product_slug}"), DEFAULT_FILES_PREFIX)
     }
 
-    pub fn runtime_root(&self) -> &Path { &self.runtime_root }
-    pub fn files_prefix(&self) -> &str { &self.files_prefix }
-    pub fn runtime_root_dir(&self) -> PathBuf { self.runtime_root.clone() }
-    pub fn data_dir(&self) -> PathBuf { self.runtime_root_dir().join("data") }
-    pub fn db_dir(&self) -> PathBuf { self.data_dir().join("db") }
-    pub fn sqlite_path(&self) -> PathBuf { self.db_dir().join(DEFAULT_SQLITE_FILE) }
-    pub fn log_dir(&self) -> PathBuf { self.runtime_root_dir().join("logs") }
-    pub fn web_dir(&self) -> PathBuf { self.runtime_root_dir().join("web") }
-    pub fn web_dist_dir(&self) -> PathBuf { self.web_dir().join("dist") }
-    pub fn uploads_dir(&self) -> PathBuf { self.data_dir().join("uploads") }
-    pub fn avatars_dir(&self) -> PathBuf { self.data_dir().join("avatars") }
+    pub fn runtime_root(&self) -> &Path {
+        &self.runtime_root
+    }
+    pub fn files_prefix(&self) -> &str {
+        &self.files_prefix
+    }
+    pub fn runtime_root_dir(&self) -> PathBuf {
+        self.runtime_root.clone()
+    }
+    pub fn data_dir(&self) -> PathBuf {
+        self.runtime_root_dir().join("data")
+    }
+    pub fn db_dir(&self) -> PathBuf {
+        self.data_dir().join("db")
+    }
+    pub fn sqlite_path(&self) -> PathBuf {
+        self.db_dir().join(DEFAULT_SQLITE_FILE)
+    }
+    pub fn log_dir(&self) -> PathBuf {
+        self.runtime_root_dir().join("logs")
+    }
+    pub fn web_dir(&self) -> PathBuf {
+        self.runtime_root_dir().join("web")
+    }
+    pub fn web_dist_dir(&self) -> PathBuf {
+        self.web_dir().join("dist")
+    }
+    pub fn uploads_dir(&self) -> PathBuf {
+        self.data_dir().join("uploads")
+    }
+    pub fn avatars_dir(&self) -> PathBuf {
+        self.data_dir().join("avatars")
+    }
 
     pub fn runtime_dirs(&self) -> Vec<PathBuf> {
         vec![
@@ -66,7 +94,9 @@ impl RuntimeLayout {
         if self.runtime_root.is_absolute() {
             self.runtime_root.clone()
         } else {
-            env::current_dir().map(|cwd| cwd.join(&self.runtime_root)).unwrap_or_else(|_| self.runtime_root.clone())
+            env::current_dir()
+                .map(|cwd| cwd.join(&self.runtime_root))
+                .unwrap_or_else(|_| self.runtime_root.clone())
         }
     }
 }
@@ -115,7 +145,8 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn from_defaults(defaults: RuntimeDefaults) -> Self {
-        let layout = RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
+        let layout =
+            RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
         let sqlite_path = defaults
             .sqlite_path
             .map(|value| layout.resolve_runtime_path(value))
@@ -166,35 +197,58 @@ impl EnvReader {
     }
 
     pub fn optional_string(key: &str) -> Option<String> {
-        env::var(key).ok().map(|value| value.trim().to_string()).filter(|value| !value.is_empty())
+        env::var(key)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
     }
 
     pub fn path_buf(key: &str, default: impl Into<PathBuf>) -> PathBuf {
-        env::var(key).map(PathBuf::from).unwrap_or_else(|_| default.into())
+        env::var(key)
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| default.into())
     }
 
     pub fn u16(key: &str, default: u16) -> u16 {
-        env::var(key).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(default)
     }
 
     pub fn u32(key: &str, default: u32) -> u32 {
-        env::var(key).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(default)
     }
 
     pub fn u64(key: &str, default: u64) -> u64 {
-        env::var(key).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(default)
     }
 
     pub fn i64(key: &str, default: i64) -> i64 {
-        env::var(key).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(default)
     }
 
     pub fn usize(key: &str, default: usize) -> usize {
-        env::var(key).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(default)
     }
 
     pub fn bool(key: &str, default: bool) -> bool {
-        env::var(key).ok().and_then(|value| parse_bool(&value)).unwrap_or(default)
+        env::var(key)
+            .ok()
+            .and_then(|value| parse_bool(&value))
+            .unwrap_or(default)
     }
 }
 
@@ -223,7 +277,9 @@ fn normalize_path(path: &Path) -> PathBuf {
     for component in path.components() {
         match component {
             Component::CurDir => {}
-            Component::ParentDir => { normalized.pop(); }
+            Component::ParentDir => {
+                normalized.pop();
+            }
             other => normalized.push(other.as_os_str()),
         }
     }
@@ -242,7 +298,10 @@ mod tests {
         assert_eq!(layout.data_dir(), PathBuf::from(".rustzen-admin/data"));
         assert_eq!(layout.db_dir(), PathBuf::from(".rustzen-admin/data/db"));
         assert_eq!(layout.log_dir(), PathBuf::from(".rustzen-admin/logs"));
-        assert_eq!(layout.web_dist_dir(), PathBuf::from(".rustzen-admin/web/dist"));
+        assert_eq!(
+            layout.web_dist_dir(),
+            PathBuf::from(".rustzen-admin/web/dist")
+        );
         assert_eq!(layout.files_prefix(), DEFAULT_FILES_PREFIX);
     }
 
@@ -252,6 +311,9 @@ mod tests {
         assert_eq!(config.app_host, "0.0.0.0");
         assert_eq!(config.app_port, 9880);
         assert_eq!(config.bind_addr(), "0.0.0.0:9880");
-        assert_eq!(config.layout.runtime_root_dir(), PathBuf::from(".rustzen-admin"));
+        assert_eq!(
+            config.layout.runtime_root_dir(),
+            PathBuf::from(".rustzen-admin")
+        );
     }
 }

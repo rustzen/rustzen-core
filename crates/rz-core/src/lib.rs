@@ -15,11 +15,21 @@ pub mod api {
 
     impl<T> ApiResponse<T> {
         pub fn new(data: T, total: Option<i64>) -> Self {
-            Self { code: 0, message: "Success".to_string(), data, total }
+            Self {
+                code: 0,
+                message: "Success".to_string(),
+                data,
+                total,
+            }
         }
 
         pub fn with_message(data: T, message: impl Into<String>, total: Option<i64>) -> Self {
-            Self { code: 0, message: message.into(), data, total }
+            Self {
+                code: 0,
+                message: message.into(),
+                data,
+                total,
+            }
         }
 
         pub fn success(data: T) -> Self {
@@ -42,7 +52,11 @@ pub mod api {
 
     impl ErrorEnvelope {
         pub fn new(code: i32, message: impl Into<String>) -> Self {
-            Self { code, message: message.into(), data: None }
+            Self {
+                code,
+                message: message.into(),
+                data: None,
+            }
         }
     }
 
@@ -55,15 +69,31 @@ pub mod api {
 
     impl HttpError {
         pub fn new(status: u16, code: i32, message: impl Into<String>) -> Self {
-            Self { status, code, message: message.into() }
+            Self {
+                status,
+                code,
+                message: message.into(),
+            }
         }
 
-        pub fn bad_request(code: i32, message: impl Into<String>) -> Self { Self::new(400, code, message) }
-        pub fn unauthorized(code: i32, message: impl Into<String>) -> Self { Self::new(401, code, message) }
-        pub fn forbidden(code: i32, message: impl Into<String>) -> Self { Self::new(403, code, message) }
-        pub fn not_found(code: i32, message: impl Into<String>) -> Self { Self::new(404, code, message) }
-        pub fn conflict(code: i32, message: impl Into<String>) -> Self { Self::new(409, code, message) }
-        pub fn internal(code: i32, message: impl Into<String>) -> Self { Self::new(500, code, message) }
+        pub fn bad_request(code: i32, message: impl Into<String>) -> Self {
+            Self::new(400, code, message)
+        }
+        pub fn unauthorized(code: i32, message: impl Into<String>) -> Self {
+            Self::new(401, code, message)
+        }
+        pub fn forbidden(code: i32, message: impl Into<String>) -> Self {
+            Self::new(403, code, message)
+        }
+        pub fn not_found(code: i32, message: impl Into<String>) -> Self {
+            Self::new(404, code, message)
+        }
+        pub fn conflict(code: i32, message: impl Into<String>) -> Self {
+            Self::new(409, code, message)
+        }
+        pub fn internal(code: i32, message: impl Into<String>) -> Self {
+            Self::new(500, code, message)
+        }
 
         pub fn envelope(&self) -> ErrorEnvelope {
             ErrorEnvelope::new(self.code, self.message.clone())
@@ -79,12 +109,22 @@ pub mod api {
     }
 
     impl Pagination {
-        pub fn normalize(page: Option<i64>, page_size: Option<i64>, default_size: i64, max_size: i64) -> Self {
+        pub fn normalize(
+            page: Option<i64>,
+            page_size: Option<i64>,
+            default_size: i64,
+            max_size: i64,
+        ) -> Self {
             let page = page.unwrap_or(1).max(1);
             let default_size = default_size.clamp(1, max_size.max(1));
             let page_size = page_size.unwrap_or(default_size).clamp(1, max_size.max(1));
             let offset = (page - 1) * page_size;
-            Self { page, page_size, limit: page_size, offset }
+            Self {
+                page,
+                page_size,
+                limit: page_size,
+                offset,
+            }
         }
     }
 }
@@ -124,12 +164,16 @@ pub mod hash {
 }
 
 pub mod sqlite {
-    use std::{path::{Path, PathBuf}, str::FromStr, time::Duration};
+    use std::{
+        path::{Path, PathBuf},
+        str::FromStr,
+        time::Duration,
+    };
 
     use sqlx::{
+        SqlitePool,
         migrate::Migrator,
         sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
-        SqlitePool,
     };
 
     use crate::error::CoreError;
@@ -145,7 +189,9 @@ pub mod sqlite {
     }
 
     impl Default for SqliteTuningProfile {
-        fn default() -> Self { Self::Service }
+        fn default() -> Self {
+            Self::Service
+        }
     }
 
     #[derive(Debug, Clone)]
@@ -161,19 +207,32 @@ pub mod sqlite {
 
     impl SqlitePoolConfig {
         pub fn minimal() -> Self {
-            Self { tuning_profile: SqliteTuningProfile::Minimal, ..Self::default() }
+            Self {
+                tuning_profile: SqliteTuningProfile::Minimal,
+                ..Self::default()
+            }
         }
 
         pub fn service() -> Self {
-            Self { tuning_profile: SqliteTuningProfile::Service, ..Self::default() }
+            Self {
+                tuning_profile: SqliteTuningProfile::Service,
+                ..Self::default()
+            }
         }
 
         pub fn read_optimized() -> Self {
-            Self { tuning_profile: SqliteTuningProfile::ReadOptimized, ..Self::default() }
+            Self {
+                tuning_profile: SqliteTuningProfile::ReadOptimized,
+                ..Self::default()
+            }
         }
 
         pub fn agent() -> Self {
-            Self { tuning_profile: SqliteTuningProfile::Agent, max_connections: 5, ..Self::default() }
+            Self {
+                tuning_profile: SqliteTuningProfile::Agent,
+                max_connections: 5,
+                ..Self::default()
+            }
         }
 
         pub fn with_pool_size(mut self, min_connections: u32, max_connections: u32) -> Self {
@@ -262,12 +321,16 @@ pub mod sqlite {
     }
 
     pub async fn run_incremental_vacuum(pool: &SqlitePool) -> Result<(), CoreError> {
-        sqlx::query("PRAGMA incremental_vacuum").execute(pool).await?;
+        sqlx::query("PRAGMA incremental_vacuum")
+            .execute(pool)
+            .await?;
         Ok(())
     }
 
     pub async fn run_wal_checkpoint_truncate(pool: &SqlitePool) -> Result<(), CoreError> {
-        sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)").execute(pool).await?;
+        sqlx::query("PRAGMA wal_checkpoint(TRUNCATE)")
+            .execute(pool)
+            .await?;
         Ok(())
     }
 
@@ -276,12 +339,18 @@ pub mod sqlite {
     }
 
     pub fn ensure_database_directory(database_url: &str) -> Result<(), CoreError> {
-        let Some(path) = database_path_from_url(database_url) else { return Ok(()); };
+        let Some(path) = database_path_from_url(database_url) else {
+            return Ok(());
+        };
         if path.as_os_str().is_empty() {
-            return Err(CoreError::InvalidInput("SQLite database path cannot be empty".to_string()));
+            return Err(CoreError::InvalidInput(
+                "SQLite database path cannot be empty".to_string(),
+            ));
         }
         if path.is_dir() {
-            return Err(CoreError::InvalidInput("SQLite database path must be a file path, not a directory".to_string()));
+            return Err(CoreError::InvalidInput(
+                "SQLite database path must be a file path, not a directory".to_string(),
+            ));
         }
         if let Some(parent) = path.parent() {
             if !parent.as_os_str().is_empty() {
@@ -291,7 +360,10 @@ pub mod sqlite {
         Ok(())
     }
 
-    fn apply_tuning(options: SqliteConnectOptions, config: &SqlitePoolConfig) -> SqliteConnectOptions {
+    fn apply_tuning(
+        options: SqliteConnectOptions,
+        config: &SqlitePoolConfig,
+    ) -> SqliteConnectOptions {
         let options = options
             .create_if_missing(true)
             .foreign_keys(config.foreign_keys)
@@ -341,9 +413,10 @@ pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
 pub use error::CoreError;
 pub use hash::fnv1a64;
 pub use sqlite::{
-    SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite, connect_sqlite_with_config,
-    database_url_from_path, ensure_database_directory, is_row_not_found, run_incremental_vacuum,
-    run_migrations, run_wal_checkpoint_truncate, test_connection,
+    SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite,
+    connect_sqlite_with_config, database_url_from_path, ensure_database_directory,
+    is_row_not_found, run_incremental_vacuum, run_migrations, run_wal_checkpoint_truncate,
+    test_connection,
 };
 
 #[cfg(test)]

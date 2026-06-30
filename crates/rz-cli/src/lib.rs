@@ -1,6 +1,10 @@
 //! Shared Rustzen CLI helpers.
 
-use std::{fmt::Display, fs, path::{Path, PathBuf}};
+use std::{
+    fmt::Display,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use serde::Serialize;
 use serde_json::Value;
@@ -14,7 +18,9 @@ pub enum OutputFormat {
 }
 
 impl Default for OutputFormat {
-    fn default() -> Self { Self::Text }
+    fn default() -> Self {
+        Self::Text
+    }
 }
 
 impl OutputFormat {
@@ -35,11 +41,19 @@ pub enum Verbosity {
 }
 
 impl Default for Verbosity {
-    fn default() -> Self { Self::Normal }
+    fn default() -> Self {
+        Self::Normal
+    }
 }
 
 impl Verbosity {
-    pub fn resolve(quiet: bool, no_quiet: bool, verbose: bool, no_verbose: bool, default: Self) -> Self {
+    pub fn resolve(
+        quiet: bool,
+        no_quiet: bool,
+        verbose: bool,
+        no_verbose: bool,
+        default: Self,
+    ) -> Self {
         if no_quiet {
             return Self::Normal;
         }
@@ -75,7 +89,13 @@ impl CliOutput {
         Self { format, verbosity }
     }
 
-    pub fn from_flags(json: bool, quiet: bool, no_quiet: bool, verbose: bool, no_verbose: bool) -> Self {
+    pub fn from_flags(
+        json: bool,
+        quiet: bool,
+        no_quiet: bool,
+        verbose: bool,
+        no_verbose: bool,
+    ) -> Self {
         Self {
             format: OutputFormat::from_json_flag(json),
             verbosity: Verbosity::resolve(quiet, no_quiet, verbose, no_verbose, Verbosity::Normal),
@@ -164,7 +184,11 @@ pub fn discover_config_files(
         return Ok(vec![path.to_path_buf()]);
     }
 
-    Ok(vec![cwd.join(".rzrc"), cwd.join(".rzrc.json"), cwd.join("package.json")])
+    Ok(vec![
+        cwd.join(".rzrc"),
+        cwd.join(".rzrc.json"),
+        cwd.join("package.json"),
+    ])
 }
 
 pub fn load_json_config(
@@ -183,7 +207,10 @@ pub fn load_json_config_from(
     for candidate in discover_config_files(explicit, cwd)? {
         if candidate.exists() {
             if let Some(value) = read_json_config_file(&candidate, package_field)? {
-                return Ok(Some(LoadedConfig { path: candidate, value }));
+                return Ok(Some(LoadedConfig {
+                    path: candidate,
+                    value,
+                }));
             }
         }
     }
@@ -240,7 +267,13 @@ mod tests {
 
     #[test]
     fn disable_toggle_wins() {
-        assert!(!ToggleFlag { enable: true, disable: true }.resolve(true));
+        assert!(
+            !ToggleFlag {
+                enable: true,
+                disable: true
+            }
+            .resolve(true)
+        );
         assert!(resolve_toggle(false, false, true));
     }
 }

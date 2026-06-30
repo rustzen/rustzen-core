@@ -16,7 +16,10 @@ pub struct WalkOptions {
 
 impl Default for WalkOptions {
     fn default() -> Self {
-        Self { follow_links: false, include_dirs: true }
+        Self {
+            follow_links: false,
+            include_dirs: true,
+        }
     }
 }
 
@@ -54,7 +57,12 @@ pub fn collect_path_stats_with_options(
     let metadata = fs::metadata(path)?;
 
     if metadata.is_file() {
-        return Ok(PathStats { entries: 1, files: 1, dirs: 0, bytes: metadata.len() });
+        return Ok(PathStats {
+            entries: 1,
+            files: 1,
+            dirs: 0,
+            bytes: metadata.len(),
+        });
     }
 
     let mut stats = PathStats::default();
@@ -195,7 +203,10 @@ pub fn canonicalize_within(
     if candidate.starts_with(&root) {
         Ok(candidate)
     } else {
-        Err(io::Error::new(io::ErrorKind::PermissionDenied, "path is outside the allowed root"))
+        Err(io::Error::new(
+            io::ErrorKind::PermissionDenied,
+            "path is outside the allowed root",
+        ))
     }
 }
 

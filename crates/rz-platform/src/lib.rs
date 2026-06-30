@@ -11,29 +11,67 @@ pub struct ServiceLayout {
 impl ServiceLayout {
     pub fn for_product(product: impl Into<String>) -> Self {
         let product = product.into();
-        Self { install_root: PathBuf::from(format!("/opt/{product}")), product }
+        Self {
+            install_root: PathBuf::from(format!("/opt/{product}")),
+            product,
+        }
     }
 
     pub fn new(product: impl Into<String>, install_root: impl Into<PathBuf>) -> Self {
-        Self { product: product.into(), install_root: install_root.into() }
+        Self {
+            product: product.into(),
+            install_root: install_root.into(),
+        }
     }
 
-    pub fn product(&self) -> &str { &self.product }
-    pub fn install_root(&self) -> &Path { &self.install_root }
-    pub fn bin_dir(&self) -> PathBuf { self.install_root.join("bin") }
-    pub fn bin_path(&self, binary_name: &str) -> PathBuf { self.bin_dir().join(binary_name) }
-    pub fn config_dir(&self) -> PathBuf { self.install_root.join("config") }
-    pub fn env_file(&self) -> PathBuf { self.config_dir().join("app.env") }
-    pub fn data_dir(&self) -> PathBuf { self.install_root.join("data") }
-    pub fn db_dir(&self) -> PathBuf { self.data_dir().join("db") }
-    pub fn uploads_dir(&self) -> PathBuf { self.data_dir().join("uploads") }
-    pub fn avatars_dir(&self) -> PathBuf { self.data_dir().join("avatars") }
-    pub fn logs_dir(&self) -> PathBuf { self.install_root.join("logs") }
-    pub fn systemd_dir(&self) -> PathBuf { self.install_root.join("systemd") }
-    pub fn service_file_name(&self) -> String { format!("{}.service", self.product) }
-    pub fn service_file_path(&self) -> PathBuf { self.systemd_dir().join(self.service_file_name()) }
-    pub fn web_dir(&self) -> PathBuf { self.install_root.join("web") }
-    pub fn web_dist_dir(&self) -> PathBuf { self.web_dir().join("dist") }
+    pub fn product(&self) -> &str {
+        &self.product
+    }
+    pub fn install_root(&self) -> &Path {
+        &self.install_root
+    }
+    pub fn bin_dir(&self) -> PathBuf {
+        self.install_root.join("bin")
+    }
+    pub fn bin_path(&self, binary_name: &str) -> PathBuf {
+        self.bin_dir().join(binary_name)
+    }
+    pub fn config_dir(&self) -> PathBuf {
+        self.install_root.join("config")
+    }
+    pub fn env_file(&self) -> PathBuf {
+        self.config_dir().join("app.env")
+    }
+    pub fn data_dir(&self) -> PathBuf {
+        self.install_root.join("data")
+    }
+    pub fn db_dir(&self) -> PathBuf {
+        self.data_dir().join("db")
+    }
+    pub fn uploads_dir(&self) -> PathBuf {
+        self.data_dir().join("uploads")
+    }
+    pub fn avatars_dir(&self) -> PathBuf {
+        self.data_dir().join("avatars")
+    }
+    pub fn logs_dir(&self) -> PathBuf {
+        self.install_root.join("logs")
+    }
+    pub fn systemd_dir(&self) -> PathBuf {
+        self.install_root.join("systemd")
+    }
+    pub fn service_file_name(&self) -> String {
+        format!("{}.service", self.product)
+    }
+    pub fn service_file_path(&self) -> PathBuf {
+        self.systemd_dir().join(self.service_file_name())
+    }
+    pub fn web_dir(&self) -> PathBuf {
+        self.install_root.join("web")
+    }
+    pub fn web_dist_dir(&self) -> PathBuf {
+        self.web_dir().join("dist")
+    }
 
     pub fn required_dirs(&self) -> Vec<PathBuf> {
         vec![
@@ -59,7 +97,9 @@ pub struct ResourceLimits {
 }
 
 impl ResourceLimits {
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn memory_high(mut self, value: impl Into<String>) -> Self {
         self.memory_high = Some(value.into());
@@ -162,8 +202,12 @@ impl SystemdService {
         output.push_str("After=network.target\n\n");
         output.push_str("[Service]\n");
         output.push_str("Type=simple\n");
-        if let Some(user) = &self.user { output.push_str(&format!("User={user}\n")); }
-        if let Some(group) = &self.group { output.push_str(&format!("Group={group}\n")); }
+        if let Some(user) = &self.user {
+            output.push_str(&format!("User={user}\n"));
+        }
+        if let Some(group) = &self.group {
+            output.push_str(&format!("Group={group}\n"));
+        }
         if let Some(environment_file) = &self.environment_file {
             output.push_str(&format!("EnvironmentFile={}\n", environment_file.display()));
         }
@@ -171,23 +215,42 @@ impl SystemdService {
             output.push_str(&format!("Environment={key}={value}\n"));
         }
         output.push_str(&format!("ExecStart={}\n", self.exec_start.display()));
-        output.push_str(&format!("WorkingDirectory={}\n", self.working_directory.display()));
+        output.push_str(&format!(
+            "WorkingDirectory={}\n",
+            self.working_directory.display()
+        ));
         output.push_str(&format!("Restart={}\n", self.restart));
         output.push_str(&format!("RestartSec={}\n", self.restart_sec));
-        if let Some(memory_high) = &self.resource_limits.memory_high { output.push_str(&format!("MemoryHigh={memory_high}\n")); }
-        if let Some(memory_max) = &self.resource_limits.memory_max { output.push_str(&format!("MemoryMax={memory_max}\n")); }
-        if let Some(cpu_quota) = &self.resource_limits.cpu_quota { output.push_str(&format!("CPUQuota={cpu_quota}\n")); }
-        if let Some(tasks_max) = self.resource_limits.tasks_max { output.push_str(&format!("TasksMax={tasks_max}\n")); }
-        if let Some(limit_nofile) = self.resource_limits.limit_nofile { output.push_str(&format!("LimitNOFILE={limit_nofile}\n")); }
-        if self.no_new_privileges { output.push_str("NoNewPrivileges=true\n"); }
-        if self.private_tmp { output.push_str("PrivateTmp=true\n"); }
+        if let Some(memory_high) = &self.resource_limits.memory_high {
+            output.push_str(&format!("MemoryHigh={memory_high}\n"));
+        }
+        if let Some(memory_max) = &self.resource_limits.memory_max {
+            output.push_str(&format!("MemoryMax={memory_max}\n"));
+        }
+        if let Some(cpu_quota) = &self.resource_limits.cpu_quota {
+            output.push_str(&format!("CPUQuota={cpu_quota}\n"));
+        }
+        if let Some(tasks_max) = self.resource_limits.tasks_max {
+            output.push_str(&format!("TasksMax={tasks_max}\n"));
+        }
+        if let Some(limit_nofile) = self.resource_limits.limit_nofile {
+            output.push_str(&format!("LimitNOFILE={limit_nofile}\n"));
+        }
+        if self.no_new_privileges {
+            output.push_str("NoNewPrivileges=true\n");
+        }
+        if self.private_tmp {
+            output.push_str("PrivateTmp=true\n");
+        }
         output.push_str("\n[Install]\n");
         output.push_str("WantedBy=multi-user.target\n");
         output
     }
 }
 
-pub fn render_env_file(entries: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>) -> String {
+pub fn render_env_file(
+    entries: impl IntoIterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+) -> String {
     let mut output = String::new();
     for (key, value) in entries {
         output.push_str(key.as_ref());
@@ -206,8 +269,14 @@ mod tests {
     #[test]
     fn layout_uses_opt_product_root() {
         let layout = ServiceLayout::for_product("rustzen-admin");
-        assert_eq!(layout.install_root().to_path_buf(), PathBuf::from("/opt/rustzen-admin"));
-        assert_eq!(layout.env_file(), PathBuf::from("/opt/rustzen-admin/config/app.env"));
+        assert_eq!(
+            layout.install_root().to_path_buf(),
+            PathBuf::from("/opt/rustzen-admin")
+        );
+        assert_eq!(
+            layout.env_file(),
+            PathBuf::from("/opt/rustzen-admin/config/app.env")
+        );
         assert_eq!(layout.service_file_name(), "rustzen-admin.service");
     }
 
@@ -223,7 +292,10 @@ mod tests {
     #[test]
     fn systemd_render_has_required_fields() {
         let layout = ServiceLayout::for_product("rustzen-admin");
-        let limits = ResourceLimits::new().memory_high("4G").memory_max("6G").cpu_quota("300%");
+        let limits = ResourceLimits::new()
+            .memory_high("4G")
+            .memory_max("6G")
+            .cpu_quota("300%");
         let service = SystemdService::for_layout(&layout, "rustzen-admin")
             .with_security(true, true)
             .with_resource_limits(limits)
