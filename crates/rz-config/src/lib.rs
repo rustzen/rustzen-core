@@ -155,10 +155,8 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn from_defaults(defaults: RuntimeDefaults) -> Self {
-        let layout = RuntimeLayout::new(
-            format!(".{}", defaults.product_slug),
-            defaults.files_prefix,
-        );
+        let layout =
+            RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
         let sqlite_path = defaults
             .sqlite_path
             .map(|value| layout.resolve_runtime_path(value))
@@ -450,9 +448,6 @@ mod tests {
             EnvFileEntry::new("RUSTZEN_APP_PORT", "9880"),
             EnvFileEntry::new("RUSTZEN_RUNTIME_ROOT", "."),
         ]);
-        assert_eq!(
-            rendered,
-            "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n"
-        );
+        assert_eq!(rendered, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
     }
 }

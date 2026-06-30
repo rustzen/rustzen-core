@@ -25,11 +25,7 @@ impl Default for OutputFormat {
 
 impl OutputFormat {
     pub fn from_json_flag(json: bool) -> Self {
-        if json {
-            Self::Json
-        } else {
-            Self::Text
-        }
+        if json { Self::Json } else { Self::Text }
     }
 
     pub fn is_json(self) -> bool {
@@ -102,13 +98,7 @@ impl CliOutput {
     ) -> Self {
         Self {
             format: OutputFormat::from_json_flag(json),
-            verbosity: Verbosity::resolve(
-                quiet,
-                no_quiet,
-                verbose,
-                no_verbose,
-                Verbosity::Normal,
-            ),
+            verbosity: Verbosity::resolve(quiet, no_quiet, verbose, no_verbose, Verbosity::Normal),
         }
     }
 

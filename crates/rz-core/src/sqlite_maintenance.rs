@@ -95,11 +95,21 @@ pub struct SqliteMaintenanceReport {
 }
 
 pub async fn sqlite_pragma_snapshot(pool: &SqlitePool) -> Result<SqlitePragmaSnapshot, CoreError> {
-    let journal_mode: String = sqlx::query_scalar("PRAGMA journal_mode").fetch_one(pool).await?;
-    let synchronous: i64 = sqlx::query_scalar("PRAGMA synchronous").fetch_one(pool).await?;
-    let page_size: i64 = sqlx::query_scalar("PRAGMA page_size").fetch_one(pool).await?;
-    let page_count: i64 = sqlx::query_scalar("PRAGMA page_count").fetch_one(pool).await?;
-    let freelist_count: i64 = sqlx::query_scalar("PRAGMA freelist_count").fetch_one(pool).await?;
+    let journal_mode: String = sqlx::query_scalar("PRAGMA journal_mode")
+        .fetch_one(pool)
+        .await?;
+    let synchronous: i64 = sqlx::query_scalar("PRAGMA synchronous")
+        .fetch_one(pool)
+        .await?;
+    let page_size: i64 = sqlx::query_scalar("PRAGMA page_size")
+        .fetch_one(pool)
+        .await?;
+    let page_count: i64 = sqlx::query_scalar("PRAGMA page_count")
+        .fetch_one(pool)
+        .await?;
+    let freelist_count: i64 = sqlx::query_scalar("PRAGMA freelist_count")
+        .fetch_one(pool)
+        .await?;
     let freelist_bytes = page_size.saturating_mul(freelist_count);
 
     Ok(SqlitePragmaSnapshot {
@@ -133,7 +143,9 @@ pub async fn run_sqlite_optimize(pool: &SqlitePool) -> Result<(), CoreError> {
 }
 
 pub async fn run_sqlite_incremental_vacuum(pool: &SqlitePool) -> Result<(), CoreError> {
-    sqlx::query("PRAGMA incremental_vacuum").execute(pool).await?;
+    sqlx::query("PRAGMA incremental_vacuum")
+        .execute(pool)
+        .await?;
     Ok(())
 }
 

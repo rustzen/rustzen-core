@@ -378,18 +378,16 @@ mod tests {
 
     #[test]
     fn env_file_renderer_is_stable() {
-        let env = render_env_file([
-            ("RUSTZEN_APP_PORT", "9880"),
-            ("RUSTZEN_RUNTIME_ROOT", "."),
-        ]);
+        let env = render_env_file([("RUSTZEN_APP_PORT", "9880"), ("RUSTZEN_RUNTIME_ROOT", ".")]);
         assert_eq!(env, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
     }
 
     #[test]
     fn deployment_plan_renders_env_and_service() {
-        let plan = DeploymentPlan::new(ServiceLayout::for_product("rustzen-admin"), "rustzen-admin")
-            .with_env("RUSTZEN_RUNTIME_ROOT", ".")
-            .with_env("RUSTZEN_APP_PORT", "9880");
+        let plan =
+            DeploymentPlan::new(ServiceLayout::for_product("rustzen-admin"), "rustzen-admin")
+                .with_env("RUSTZEN_RUNTIME_ROOT", ".")
+                .with_env("RUSTZEN_APP_PORT", "9880");
         assert!(
             plan.render_service_file()
                 .contains("ExecStart=/opt/rustzen-admin/bin/rustzen-admin")

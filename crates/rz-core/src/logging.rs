@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use tracing_subscriber::{EnvFilter, util::SubscriberInitExt};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LogTarget {
@@ -93,8 +93,8 @@ pub fn default_filter() -> String {
 }
 
 pub fn init_logging(config: LoggingConfig) -> Result<(), LoggingError> {
-    let env_filter = EnvFilter::try_new(&config.env_filter)
-        .unwrap_or_else(|_| EnvFilter::new(default_filter()));
+    let env_filter =
+        EnvFilter::try_new(&config.env_filter).unwrap_or_else(|_| EnvFilter::new(default_filter()));
 
     match config.target {
         LogTarget::Stdout => tracing_subscriber::fmt()
@@ -119,7 +119,10 @@ pub fn init_logging(config: LoggingConfig) -> Result<(), LoggingError> {
 
 pub fn open_log_file(config: &LogFileConfig) -> Result<File, io::Error> {
     fs::create_dir_all(&config.directory)?;
-    OpenOptions::new().create(true).append(true).open(config.path())
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(config.path())
 }
 
 pub fn log_file_path(directory: impl AsRef<Path>, file_name: &str) -> PathBuf {

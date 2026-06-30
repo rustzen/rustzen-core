@@ -153,10 +153,7 @@ pub fn copy_if_missing(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Res
     Ok(CopyOutcome::Copied)
 }
 
-pub fn copy_if_different(
-    src: impl AsRef<Path>,
-    dest: impl AsRef<Path>,
-) -> io::Result<CopyOutcome> {
+pub fn copy_if_different(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> io::Result<CopyOutcome> {
     let src = src.as_ref();
     let dest = dest.as_ref();
     if dest.exists() && files_equal(src, dest)? {
