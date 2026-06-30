@@ -1,7 +1,7 @@
 //! Shared Rustzen runtime layout and environment helpers.
 
 use std::{
-    env,
+    env, fmt,
     path::{Component, Path, PathBuf},
 };
 
@@ -31,33 +31,43 @@ impl RuntimeLayout {
     pub fn runtime_root(&self) -> &Path {
         &self.runtime_root
     }
+
     pub fn files_prefix(&self) -> &str {
         &self.files_prefix
     }
+
     pub fn runtime_root_dir(&self) -> PathBuf {
         self.runtime_root.clone()
     }
+
     pub fn data_dir(&self) -> PathBuf {
         self.runtime_root_dir().join("data")
     }
+
     pub fn db_dir(&self) -> PathBuf {
         self.data_dir().join("db")
     }
+
     pub fn sqlite_path(&self) -> PathBuf {
         self.db_dir().join(DEFAULT_SQLITE_FILE)
     }
+
     pub fn log_dir(&self) -> PathBuf {
         self.runtime_root_dir().join("logs")
     }
+
     pub fn web_dir(&self) -> PathBuf {
         self.runtime_root_dir().join("web")
     }
+
     pub fn web_dist_dir(&self) -> PathBuf {
         self.web_dir().join("dist")
     }
+
     pub fn uploads_dir(&self) -> PathBuf {
         self.data_dir().join("uploads")
     }
+
     pub fn avatars_dir(&self) -> PathBuf {
         self.data_dir().join("avatars")
     }
@@ -145,8 +155,7 @@ pub struct RuntimeConfig {
 
 impl RuntimeConfig {
     pub fn from_defaults(defaults: RuntimeDefaults) -> Self {
-        let layout =
-            RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
+        let layout = RuntimeLayout::new(format!(".{}", defaults.product_slug), defaults.files_prefix);
         let sqlite_path = defaults
             .sqlite_path
             .map(|value| layout.resolve_runtime_path(value))
@@ -252,11 +261,105 @@ impl EnvReader {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct EnvFileEntry {
+    pub key: String,
+    pub value: String,
+}
+
+impl EnvFileEntry {
+    pub fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct EnvFileError {
+    pub line: usize,
+    pub message: String,
+}
+
+impl EnvFileError {
+    fn new(line: usize, message: impl Into<String>) -> Self {
+        Self {
+            line,
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for EnvFileError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "invalid env file line {}: {}", self.line, self.message)
+    }
+}
+
+impl std::error::Error for EnvFileError {}
+
+pub fn parse_env_file(content: &str) -> Result<Vec<EnvFileEntry>, EnvFileError> {
+    let mut entries = Vec::new();
+    for (index, raw_line) in content.lines().enumerate() {
+        let line_number = index + 1;
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let line = line.strip_prefix("export ").unwrap_or(line).trim();
+        let Some((key, value)) = line.split_once('=') else {
+            return Err(EnvFileError::new(line_number, "missing '='"));
+        };
+        let key = key.trim();
+        if !is_valid_env_key(key) {
+            return Err(EnvFileError::new(line_number, "invalid key"));
+        }
+        entries.push(EnvFileEntry::new(key, unquote_env_value(value.trim())));
+    }
+    Ok(entries)
+}
+
+pub fn render_env_file(entries: impl IntoIterator<Item = EnvFileEntry>) -> String {
+    let mut output = String::new();
+    for entry in entries {
+        output.push_str(&entry.key);
+        output.push('=');
+        output.push_str(&entry.value);
+        output.push('\n');
+    }
+    output
+}
+
 fn parse_bool(value: &str) -> Option<bool> {
     match value.trim().to_ascii_lowercase().as_str() {
         "1" | "true" | "yes" | "y" | "on" => Some(true),
         "0" | "false" | "no" | "n" | "off" => Some(false),
         _ => None,
+    }
+}
+
+fn is_valid_env_key(key: &str) -> bool {
+    let mut chars = key.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !(first == '_' || first.is_ascii_alphabetic()) {
+        return false;
+    }
+    chars.all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+}
+
+fn unquote_env_value(value: &str) -> String {
+    let bytes = value.as_bytes();
+    if bytes.len() >= 2
+        && ((bytes[0] == b'"' && bytes[bytes.len() - 1] == b'"')
+            || (bytes[0] == b'\'' && bytes[bytes.len() - 1] == b'\''))
+    {
+        value[1..value.len() - 1].to_string()
+    } else {
+        value.to_string()
     }
 }
 
@@ -288,7 +391,10 @@ fn normalize_path(path: &Path) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEFAULT_FILES_PREFIX, RuntimeConfig, RuntimeDefaults, RuntimeLayout};
+    use super::{
+        DEFAULT_FILES_PREFIX, EnvFileEntry, RuntimeConfig, RuntimeDefaults, RuntimeLayout,
+        parse_env_file, render_env_file,
+    };
     use std::path::PathBuf;
 
     #[test]
@@ -315,5 +421,28 @@ mod tests {
             config.layout.runtime_root_dir(),
             PathBuf::from(".rustzen-admin")
         );
+    }
+
+    #[test]
+    fn env_file_parser_handles_export_and_quotes() {
+        let entries = parse_env_file(
+            r#"
+            # comment
+            export RUSTZEN_APP_PORT=9880
+            RUSTZEN_RUNTIME_ROOT="."
+            "#,
+        )
+        .expect("parse env file");
+        assert_eq!(entries[0], EnvFileEntry::new("RUSTZEN_APP_PORT", "9880"));
+        assert_eq!(entries[1], EnvFileEntry::new("RUSTZEN_RUNTIME_ROOT", "."));
+    }
+
+    #[test]
+    fn env_file_renderer_is_stable() {
+        let rendered = render_env_file([
+            EnvFileEntry::new("RUSTZEN_APP_PORT", "9880"),
+            EnvFileEntry::new("RUSTZEN_RUNTIME_ROOT", "."),
+        ]);
+        assert_eq!(rendered, "RUSTZEN_APP_PORT=9880\nRUSTZEN_RUNTIME_ROOT=.\n");
     }
 }
