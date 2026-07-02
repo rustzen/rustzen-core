@@ -437,7 +437,8 @@ pub use logging::{
 pub use role_policy::{
     ADMIN_ROLE_CODE, DEFAULT_DEPLOY_CAPABILITY_PREFIX, DEFAULT_DEPLOY_VIEW_CAPABILITY,
     OWNER_ROLE_CODE, RolePolicy, SYSTEM_WILDCARD, VIEW_ACTIONS, VIEWER_ROLE_CODE,
-    default_role_allows_capability, default_role_capability_codes,
+    capability_grant_matches, capability_set_contains, default_role_allows_capability,
+    default_role_capability_codes,
 };
 #[cfg(feature = "sqlite")]
 pub use sqlite::{

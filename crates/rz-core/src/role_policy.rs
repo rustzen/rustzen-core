@@ -102,11 +102,36 @@ pub fn default_role_capability_codes<'a>(
         .collect()
 }
 
+pub fn capability_grant_matches(grant_code: &str, required_code: &str) -> bool {
+    if grant_code == SYSTEM_WILDCARD || grant_code == required_code {
+        return true;
+    }
+
+    let Some(prefix) = grant_code.strip_suffix(":*") else {
+        return false;
+    };
+
+    !prefix.is_empty()
+        && required_code.len() > prefix.len()
+        && required_code.starts_with(prefix)
+        && required_code.as_bytes().get(prefix.len()) == Some(&b':')
+}
+
+pub fn capability_set_contains<I, S>(grant_codes: I, required_code: &str) -> bool
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    grant_codes
+        .into_iter()
+        .any(|grant_code| capability_grant_matches(grant_code.as_ref(), required_code))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         ADMIN_ROLE_CODE, OWNER_ROLE_CODE, RolePolicy, SYSTEM_WILDCARD, VIEWER_ROLE_CODE,
-        default_role_capability_codes,
+        capability_grant_matches, capability_set_contains, default_role_capability_codes,
     };
 
     #[test]
@@ -157,5 +182,40 @@ mod tests {
                 "manage:deploy:list".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn capability_grant_matches_exact_wildcard_and_prefix_grants() {
+        assert!(capability_grant_matches(
+            SYSTEM_WILDCARD,
+            "system:user:delete"
+        ));
+        assert!(capability_grant_matches(
+            "system:user:list",
+            "system:user:list"
+        ));
+        assert!(capability_grant_matches(
+            "system:user:*",
+            "system:user:list"
+        ));
+        assert!(capability_grant_matches(
+            "system:user:*",
+            "system:user:status:update"
+        ));
+        assert!(capability_grant_matches("system:*", "system:user:list"));
+        assert!(!capability_grant_matches(
+            "system:user:*",
+            "system:role:list"
+        ));
+        assert!(!capability_grant_matches("system:user:*", "system:user"));
+        assert!(!capability_grant_matches("system:user", "system:user:list"));
+    }
+
+    #[test]
+    fn capability_set_contains_checks_all_grants() {
+        let grants = ["system:role:list", "manage:task:*"];
+
+        assert!(capability_set_contains(grants, "manage:task:run"));
+        assert!(!capability_set_contains(grants, "manage:deploy:run"));
     }
 }

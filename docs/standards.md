@@ -15,6 +15,8 @@ Owns product-neutral primitives:
 - Common error type for shared helpers.
 - Stable hashing helpers.
 - Product-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
+- Product-neutral capability grant matching for exact, wildcard, and
+  colon-prefix wildcard grants.
 - SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers aligned on `sqlx 0.9.0`.
 - Tracing/logging initialization for stdout, append-only file targets, daily rolling file targets, and date-based retention cleanup.
 
