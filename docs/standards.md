@@ -17,6 +17,9 @@ Owns product-neutral primitives:
 - Product-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
 - Product-neutral capability grant matching for exact, wildcard, and
   colon-prefix wildcard grants.
+- Product-neutral deploy artifact validation for binary markers, web dist zip
+  structure, content hashes, signature markers, and binary architecture
+  detection.
 - SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers aligned on `sqlx 0.9.0`.
 - Tracing/logging initialization for stdout, append-only file targets, daily rolling file targets, and date-based retention cleanup.
 

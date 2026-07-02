@@ -1,5 +1,8 @@
 //! Shared Rustzen core primitives.
 
+#[cfg(feature = "deploy")]
+pub mod deploy_artifact;
+
 pub mod api {
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
@@ -425,6 +428,15 @@ pub mod sqlite {
 }
 
 pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
+#[cfg(feature = "deploy")]
+pub use deploy_artifact::{
+    AppendedMarkerBounds, BinaryArch, DeployArtifactError, DeploySignatureMarker,
+    SignatureValidationInput, WebZipValidationConfig, WebZipValidationReport, append_marker_bounds,
+    binary_arch_from_str, deploy_signature_payload, detect_binary_arch, extract_zip_to_dir,
+    find_last_subslice, find_subslice, is_elf, is_macho_or_fat, is_script, is_zip,
+    normalize_binary_arch, sha256_hex, validate_binary_marker, validate_deploy_signature_marker,
+    validate_web_dist_zip, zip_path_name,
+};
 pub use error::CoreError;
 pub use hash::fnv1a64;
 #[cfg(feature = "logging")]
