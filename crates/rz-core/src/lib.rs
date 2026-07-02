@@ -185,8 +185,8 @@ pub mod sqlite {
         time::Duration,
     };
 
+    pub use sqlx::SqlitePool;
     use sqlx::{
-        SqlitePool,
         migrate::Migrator,
         sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
     };
@@ -441,7 +441,7 @@ pub use role_policy::{
 };
 #[cfg(feature = "sqlite")]
 pub use sqlite::{
-    SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite,
+    SQLITE_MEMORY, SqlitePool, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite,
     connect_sqlite_with_config, database_url_from_path, ensure_database_directory,
     is_row_not_found, run_incremental_vacuum, run_migrations, run_wal_checkpoint_truncate,
     test_connection,
