@@ -97,12 +97,28 @@ A product repository should adopt one helper at a time:
 - Shared logging dependency: `tracing`, `tracing-subscriber`, and
   `tracing-appender`.
 
-## Initial Migration Order
+## Current Product Adoption
 
-1. SQLite helpers and daily runtime logging from `rustzen-admin`,
-   `rustzen-analytics`, `rustzen-inspect`, `rustzen-report`, and
-   `rustzen-clipboard` into `rz-core`.
-2. Runtime layout and env parsing from `rustzen-admin`, `rustzen-analytics`, `rustzen-report`, and `rustzen-clipboard` into `rz-config`.
-3. systemd and install layout conventions from server products into `rz-platform`.
-4. CLI output and config-file discovery from `rustzen-clear` and `rustzen-zipper` into `rz-cli`.
-5. Filesystem stats, remove, and containment helpers from `rustzen-clear`, `rustzen-zipper`, and `rustzen-clipboard` into `rz-fs`.
+`rustzen-admin` consumes `rustzen-core` commit
+`a7d706f0bd1e0af8021b00021916e5e02d7caa5c` with these boundaries:
+
+- `rz-core`: built-in role policy, capability matching, SQLite helpers, daily
+  logging, and deploy artifact validation.
+- `rz-config`: runtime layout and runtime path resolution through the product
+  config crate.
+- `rz-platform`: build-time release `app.env` and systemd rendering.
+- `rz-fs`: read-only filesystem statistics for system status.
+
+`rustzen-admin` does not consume `rz-cli` because it has no Rust CLI command
+surface.
+
+## Synchronization Order
+
+1. Keep `rustzen-admin` as the validated first consumer for shared server/admin
+   foundations.
+2. Synchronize the same slices to the next target product only after the target
+   worktree is clean and product-specific behavior is identified.
+3. Keep `rustzen-analytics`, `rustzen-inspect`, and `rustzen-report` for the
+   final validation phase before touching their product code.
+4. Use `rz-cli` for CLI products such as `rustzen-clear` and `rustzen-zipper`
+   when their command surfaces are being actively refactored.
