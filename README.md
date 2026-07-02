@@ -8,7 +8,7 @@ It contains executable reusable crates instead of only planning notes. Code here
 
 | Crate | Scope |
 |---|---|
-| `rz-core` | API envelopes, shared error primitives, stable hashing, SQLite helpers, SQLite maintenance, and tracing/logging helpers. |
+| `rz-core` | API envelopes, shared error primitives, stable hashing, built-in role policy helpers, optional SQLite helpers, optional SQLite maintenance, and optional tracing/logging helpers. |
 | `rz-config` | Runtime directory layout, primitive environment parsing, and `app.env` parsing/rendering. |
 | `rz-fs` | Filesystem walking, size/count stats, safe removal, directory creation, path containment, and copy helpers. |
 | `rz-cli` | CLI output mode, verbosity, top-level command error handling, JSON config discovery, and toggle resolution. |

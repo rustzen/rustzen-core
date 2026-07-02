@@ -146,8 +146,10 @@ pub mod error {
         Conflict(String),
         #[error("io error: {0}")]
         Io(#[from] std::io::Error),
+        #[cfg(feature = "sqlite")]
         #[error("sqlite error: {0}")]
         Sqlite(#[from] sqlx::Error),
+        #[cfg(feature = "sqlite")]
         #[error("migration error: {0}")]
         Migration(#[from] sqlx::migrate::MigrateError),
         #[error("json error: {0}")]
@@ -169,9 +171,13 @@ pub mod hash {
     }
 }
 
+#[cfg(feature = "logging")]
 pub mod logging;
+pub mod role_policy;
+#[cfg(feature = "sqlite")]
 pub mod sqlite_maintenance;
 
+#[cfg(feature = "sqlite")]
 pub mod sqlite {
     use std::{
         path::{Path, PathBuf},
@@ -421,13 +427,21 @@ pub mod sqlite {
 pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
 pub use error::CoreError;
 pub use hash::fnv1a64;
+#[cfg(feature = "logging")]
 pub use logging::{LogFileConfig, LogTarget, LoggingConfig, LoggingError, init_logging};
+pub use role_policy::{
+    ADMIN_ROLE_CODE, DEFAULT_DEPLOY_CAPABILITY_PREFIX, DEFAULT_DEPLOY_VIEW_CAPABILITY,
+    OWNER_ROLE_CODE, RolePolicy, SYSTEM_WILDCARD, VIEW_ACTIONS, VIEWER_ROLE_CODE,
+    default_role_allows_capability, default_role_capability_codes,
+};
+#[cfg(feature = "sqlite")]
 pub use sqlite::{
     SQLITE_MEMORY, SqlitePoolConfig, SqliteTuningProfile, connect_sqlite,
     connect_sqlite_with_config, database_url_from_path, ensure_database_directory,
     is_row_not_found, run_incremental_vacuum, run_migrations, run_wal_checkpoint_truncate,
     test_connection,
 };
+#[cfg(feature = "sqlite")]
 pub use sqlite_maintenance::{
     SqliteMaintenancePlan, SqliteMaintenanceReport, SqlitePragmaSnapshot, WalCheckpointMode,
     WalCheckpointResult, run_sqlite_incremental_vacuum, run_sqlite_maintenance,

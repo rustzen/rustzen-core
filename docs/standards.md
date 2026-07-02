@@ -14,10 +14,17 @@ Owns product-neutral primitives:
 - Framework-neutral HTTP error mapping.
 - Common error type for shared helpers.
 - Stable hashing helpers.
+- Product-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
 - SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers.
 - Tracing/logging initialization for stdout and append-only file targets.
 
-Does not own product database schemas, business queries, auth business rules, product-specific error variants, or localized messages.
+SQLite and logging helpers are optional crate features. Lightweight consumers
+can depend on `rz-core` with `default-features = false` to use policy and
+small primitives without pulling runtime/database dependencies.
+
+Does not own product database schemas, business queries, auth business rules,
+role persistence, menu persistence, product-specific error variants, or
+localized messages.
 
 ### `rz-config`
 
