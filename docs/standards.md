@@ -80,7 +80,7 @@ Release signing, updater flow, Docker base images, package extraction, and produ
 A product repository should adopt one helper at a time:
 
 1. Replace local duplicate helper with the matching `rz-*` crate function.
-2. Keep behavior-compatible defaults.
+2. Keep the current product behavior explicit and covered by product regression tests.
 3. Add a product-level regression test around the replaced behavior.
 4. Do not move business-specific structures into `rustzen-core`.
 
