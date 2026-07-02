@@ -428,7 +428,12 @@ pub use api::{ApiResponse, ErrorEnvelope, HttpError, Pagination};
 pub use error::CoreError;
 pub use hash::fnv1a64;
 #[cfg(feature = "logging")]
-pub use logging::{LogFileConfig, LogTarget, LoggingConfig, LoggingError, init_logging};
+pub use logging::{
+    DailyLogCleanupConfig, DailyLogCleanupReport, DailyLogWriter, DailyLoggingConfig,
+    DailyLoggingGuard, LogFileConfig, LogTarget, LoggingConfig, LoggingError,
+    cleanup_expired_daily_logs, cleanup_expired_daily_logs_for_date, daily_log_file_path,
+    init_daily_logging, init_logging, is_daily_log_expired, parse_daily_log_date,
+};
 pub use role_policy::{
     ADMIN_ROLE_CODE, DEFAULT_DEPLOY_CAPABILITY_PREFIX, DEFAULT_DEPLOY_VIEW_CAPABILITY,
     OWNER_ROLE_CODE, RolePolicy, SYSTEM_WILDCARD, VIEW_ACTIONS, VIEWER_ROLE_CODE,

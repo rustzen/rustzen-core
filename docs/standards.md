@@ -15,8 +15,8 @@ Owns product-neutral primitives:
 - Common error type for shared helpers.
 - Stable hashing helpers.
 - Product-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
-- SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers.
-- Tracing/logging initialization for stdout and append-only file targets.
+- SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers aligned on `sqlx 0.9.0`.
+- Tracing/logging initialization for stdout, append-only file targets, daily rolling file targets, and date-based retention cleanup.
 
 SQLite and logging helpers are optional crate features. Lightweight consumers
 can depend on `rz-core` with `default-features = false` to use policy and
@@ -84,9 +84,19 @@ A product repository should adopt one helper at a time:
 3. Add a product-level regression test around the replaced behavior.
 4. Do not move business-specific structures into `rustzen-core`.
 
+## Runtime Dependency Baseline
+
+- Rust toolchain: `1.95.0`.
+- Minimum Rust package version: `1.94`.
+- SQLite dependency: `sqlx 0.9.0`.
+- Shared logging dependency: `tracing`, `tracing-subscriber`, and
+  `tracing-appender`.
+
 ## Initial Migration Order
 
-1. SQLite helpers from `rustzen-admin`, `rustzen-analytics`, `rustzen-inspect`, `rustzen-report`, and `rustzen-clipboard` into `rz-core`.
+1. SQLite helpers and daily runtime logging from `rustzen-admin`,
+   `rustzen-analytics`, `rustzen-inspect`, `rustzen-report`, and
+   `rustzen-clipboard` into `rz-core`.
 2. Runtime layout and env parsing from `rustzen-admin`, `rustzen-analytics`, `rustzen-report`, and `rustzen-clipboard` into `rz-config`.
 3. systemd and install layout conventions from server products into `rz-platform`.
 4. CLI output and config-file discovery from `rustzen-clear` and `rustzen-zipper` into `rz-cli`.

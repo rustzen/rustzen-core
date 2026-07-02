@@ -128,7 +128,9 @@ pub async fn run_wal_checkpoint(
 ) -> Result<WalCheckpointResult, CoreError> {
     let sql = format!("PRAGMA wal_checkpoint({})", mode.as_sql());
     let (busy, log_frames, checkpointed_frames): (i64, i64, i64) =
-        sqlx::query_as(&sql).fetch_one(pool).await?;
+        sqlx::query_as(sqlx::AssertSqlSafe(sql))
+            .fetch_one(pool)
+            .await?;
 
     Ok(WalCheckpointResult {
         busy,

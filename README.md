@@ -14,12 +14,18 @@ It contains executable reusable crates instead of only planning notes. Code here
 | `rz-cli` | CLI output mode, verbosity, top-level command error handling, JSON config discovery, and toggle resolution. |
 | `rz-platform` | `/opt/rustzen-*` service layout, systemd service rendering, resource limits, and deployment plan rendering. |
 
+## Toolchain
+
+`rustzen-core` uses Rust `1.95.0`. The minimum package `rust-version` is
+`1.94` because shared SQLite helpers are aligned with `sqlx 0.9.0`.
+
 ## Standards
 
 - Keep product schemas, business queries, UI, updater logic, and release signing in product repositories.
 - Put shared primitives here only when the behavior is needed by multiple Rustzen products.
 - Prefer explicit configuration over hidden globals.
 - Keep crates small and independently consumable.
+- Keep SQLite helpers aligned with the Rustzen server stack on `sqlx 0.9.0`.
 - Use `docs/standards.md` as the shared capability boundary reference.
 
 ## Current Consumers
