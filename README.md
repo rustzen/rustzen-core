@@ -1,8 +1,10 @@
 # Rustzen Core
 
-Rustzen Core is the shared Rust capability workspace for Rustzen products.
+Rustzen Core is the shared Rust capability workspace for Rustzen projects.
 
-It contains executable reusable crates instead of only planning notes. Code here must stay product-neutral and must be useful to at least two Rustzen products before it is moved in.
+It contains executable reusable crates instead of only planning notes. Code here
+must stay project-neutral and must be useful to at least two Rustzen repositories
+before it is moved in.
 
 ## Crates
 
@@ -21,8 +23,8 @@ It contains executable reusable crates instead of only planning notes. Code here
 
 ## Standards
 
-- Keep product schemas, business queries, UI, updater logic, and release signing in product repositories.
-- Put shared primitives here only when the behavior is needed by multiple Rustzen products.
+- Keep application schemas, business queries, UI, updater logic, and release signing in owning repositories.
+- Put shared primitives here only when the behavior is needed by multiple Rustzen projects.
 - Prefer explicit configuration over hidden globals.
 - Keep crates small and independently consumable.
 - Keep SQLite helpers aligned with the Rustzen server stack on `sqlx 0.9.0`.
@@ -32,4 +34,11 @@ It contains executable reusable crates instead of only planning notes. Code here
 
 Expected consumers include `rustzen-clear`, `rustzen-admin`, `rustzen-analytics`, `rustzen-inspect`, `rustzen-report`, `rustzen-clipboard`, `rustzen-zipper`, and `rustzen-video`.
 
-No product repository is migrated automatically by this repository. Consumers should adopt these crates incrementally.
+No repository is migrated automatically by this repository. Consumers should
+adopt these crates incrementally.
+
+## License and Commercial Rights
+
+Source code is available under the [MIT License](./LICENSE). Ownership,
+branding, trademark, publishing, and commercial-use boundaries are documented in
+[NOTICE.md](./NOTICE.md).

@@ -14,7 +14,7 @@ license = "MIT"
 repository = "https://github.com/rustzen/rustzen-core"
 homepage = "https://github.com/rustzen/rustzen-core"
 rust-version = "1.94"
-authors = ["Rustzen Contributors"]
+authors = ["Bruce Dai <bruce@idaibin.dev>", "Rustzen Contributors"]
 
 [workspace.dependencies]
 chrono = { version = "0.4", features = ["clock"] }

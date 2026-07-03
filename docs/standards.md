@@ -2,19 +2,21 @@
 
 ## Goal
 
-`rustzen-core` provides shared Rust primitives for Rustzen products. It is not an application template and it must not absorb product-specific business logic.
+`rustzen-core` provides shared Rust primitives for Rustzen projects. It is not
+an application template and it must not absorb repository-specific business
+logic.
 
 ## Crate Boundaries
 
 ### `rz-core`
 
-Owns product-neutral primitives:
+Owns project-neutral primitives:
 
 - API success and error envelopes.
 - Framework-neutral HTTP error mapping.
 - Common error type for shared helpers.
 - Stable hashing helpers.
-- Product-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
+- Project-neutral built-in role policy classification for `owner`, `admin`, and `viewer`.
 - SQLite URL/path, pool, tuning, migration, connection test, checkpoint, vacuum, optimize, and pragma snapshot helpers aligned on `sqlx 0.9.0`.
 - Tracing/logging initialization for stdout, append-only file targets, daily rolling file targets, and date-based retention cleanup.
 
@@ -22,8 +24,8 @@ SQLite and logging helpers are optional crate features. Lightweight consumers
 can depend on `rz-core` with `default-features = false` to use policy and
 small primitives without pulling runtime/database dependencies.
 
-Does not own product database schemas, business queries, auth business rules,
-role persistence, menu persistence, product-specific error variants, or
+Does not own application database schemas, business queries, auth business rules,
+role persistence, menu persistence, application-specific error variants, or
 localized messages.
 
 ### `rz-config`
@@ -36,7 +38,7 @@ Owns runtime and environment conventions:
 - Primitive env parsing.
 - `app.env` / `.env` parsing and rendering.
 
-Product repositories compose their own config structs using these primitives.
+Consumer repositories compose their own config structs using these primitives.
 
 ### `rz-fs`
 
@@ -49,7 +51,7 @@ Owns filesystem primitives:
 - Copy-if-missing and copy-if-different helpers.
 - Canonical path containment checks.
 
-Product-specific scan rules, archive filters, cleanup policy, and safety allowlists stay local.
+Repository-specific scan rules, archive filters, cleanup policy, and safety allowlists stay local.
 
 ### `rz-cli`
 
@@ -61,7 +63,7 @@ Owns CLI conventions:
 - Top-level command error printing.
 - Config discovery from explicit path, `.rzrc`, `.rzrc.json`, and `package.json` field.
 
-Product subcommands and command-specific validation stay local.
+Repository subcommands and command-specific validation stay local.
 
 ### `rz-platform`
 
@@ -73,15 +75,15 @@ Owns platform conventions:
 - Resource limit rendering.
 - Deployment plan rendering for service files, env files, and required directories.
 
-Release signing, updater flow, Docker base images, package extraction, and product packaging policy stay local.
+Release signing, updater flow, Docker base images, package extraction, and packaging policy stay local.
 
 ## Adoption Rule
 
-A product repository should adopt one helper at a time:
+A consumer repository should adopt one helper at a time:
 
 1. Replace local duplicate helper with the matching `rz-*` crate function.
 2. Keep behavior-compatible defaults.
-3. Add a product-level regression test around the replaced behavior.
+3. Add a repository-level regression test around the replaced behavior.
 4. Do not move business-specific structures into `rustzen-core`.
 
 ## Runtime Dependency Baseline
@@ -98,6 +100,6 @@ A product repository should adopt one helper at a time:
    `rustzen-analytics`, `rustzen-inspect`, `rustzen-report`, and
    `rustzen-clipboard` into `rz-core`.
 2. Runtime layout and env parsing from `rustzen-admin`, `rustzen-analytics`, `rustzen-report`, and `rustzen-clipboard` into `rz-config`.
-3. systemd and install layout conventions from server products into `rz-platform`.
+3. systemd and install layout conventions from server repositories into `rz-platform`.
 4. CLI output and config-file discovery from `rustzen-clear` and `rustzen-zipper` into `rz-cli`.
 5. Filesystem stats, remove, and containment helpers from `rustzen-clear`, `rustzen-zipper`, and `rustzen-clipboard` into `rz-fs`.
