@@ -3,7 +3,16 @@ use sqlx::{QueryBuilder, Sqlite, SqlitePool, sqlite::SqliteRow};
 use crate::error::CoreError;
 
 /// Apply a case-insensitive LIKE filter when the value is present and non-empty.
-pub fn push_ilike(query_builder: &mut QueryBuilder<Sqlite>, column: &str, value: Option<&str>) {
+///
+/// `column` is emitted as SQL and must be a hard-coded identifier or selected
+/// from a static allowlist. Do not pass user input as a column name.
+/// The query builder must already contain a `WHERE` condition that can be
+/// followed by `AND`, such as `WHERE 1 = 1`.
+pub fn push_ilike(
+    query_builder: &mut QueryBuilder<Sqlite>,
+    column: &'static str,
+    value: Option<&str>,
+) {
     if let Some(value) = value {
         let value = value.trim();
         if !value.is_empty() {
@@ -18,7 +27,12 @@ pub fn push_ilike(query_builder: &mut QueryBuilder<Sqlite>, column: &str, value:
 }
 
 /// Apply an equality filter when the value is present.
-pub fn push_eq<T>(query_builder: &mut QueryBuilder<Sqlite>, column: &str, value: Option<T>)
+///
+/// `column` is emitted as SQL and must be a hard-coded identifier or selected
+/// from a static allowlist. Do not pass user input as a column name.
+/// The query builder must already contain a `WHERE` condition that can be
+/// followed by `AND`, such as `WHERE 1 = 1`.
+pub fn push_eq<T>(query_builder: &mut QueryBuilder<Sqlite>, column: &'static str, value: Option<T>)
 where
     T: for<'q> sqlx::Encode<'q, Sqlite> + sqlx::Type<Sqlite>,
 {
@@ -51,6 +65,10 @@ pub fn parse_optional_i16_filter(
 }
 
 /// Count rows for a filtered SQLite query.
+///
+/// `base_sql` must be a hard-coded SQL statement. When filters are applied, it
+/// must already contain a `WHERE` condition that can be followed by `AND`, such
+/// as `WHERE 1 = 1`.
 pub async fn count_with_filters<F>(
     pool: &SqlitePool,
     base_sql: &'static str,
@@ -68,6 +86,11 @@ where
 }
 
 /// Fetch rows for a filtered SQLite query with optional ordering and pagination.
+///
+/// `base_sql` and `order_by` are emitted as SQL and must be hard-coded fragments
+/// or selected from static allowlists. When filters are applied, `base_sql` must
+/// already contain a `WHERE` condition that can be followed by `AND`, such as
+/// `WHERE 1 = 1`.
 pub async fn fetch_with_filters<T, F>(
     pool: &SqlitePool,
     base_sql: &'static str,
@@ -102,7 +125,41 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::parse_optional_i16_filter;
+    use super::{
+        count_with_filters, fetch_with_filters, parse_optional_i16_filter, push_eq, push_ilike,
+    };
+    use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+
+    async fn setup_pool() -> SqlitePool {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE items (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL,
+                status INTEGER NOT NULL
+            )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        for (id, name, status) in [(1_i64, "Alpha", 1_i64), (2, "Beta", 2), (3, "Gamma", 1)] {
+            sqlx::query("INSERT INTO items (id, name, status) VALUES (?, ?, ?)")
+                .bind(id)
+                .bind(name)
+                .bind(status)
+                .execute(&pool)
+                .await
+                .unwrap();
+        }
+
+        pool
+    }
 
     #[test]
     fn parse_optional_i16_filter_uses_default_when_empty() {
@@ -126,5 +183,49 @@ mod tests {
             error.to_string(),
             "invalid input: Invalid status value: active"
         );
+    }
+
+    #[tokio::test]
+    async fn push_ilike_adds_case_insensitive_bound_filter() {
+        let pool = setup_pool().await;
+
+        let count = count_with_filters(&pool, "SELECT COUNT(*) FROM items WHERE 1 = 1", |query| {
+            push_ilike(query, "name", Some("AL"))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn push_eq_adds_bound_equality_filter() {
+        let pool = setup_pool().await;
+
+        let count = count_with_filters(&pool, "SELECT COUNT(*) FROM items WHERE 1 = 1", |query| {
+            push_eq(query, "status", Some(1_i64))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(count, 2);
+    }
+
+    #[tokio::test]
+    async fn fetch_with_filters_applies_ordering_limit_and_offset() {
+        let pool = setup_pool().await;
+
+        let rows: Vec<(i64, String, i64)> = fetch_with_filters(
+            &pool,
+            "SELECT id, name, status FROM items WHERE 1 = 1",
+            |query| push_eq(query, "status", Some(1_i64)),
+            Some("id DESC"),
+            Some(1),
+            Some(0),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(rows, vec![(3, "Gamma".to_string(), 1)]);
     }
 }
