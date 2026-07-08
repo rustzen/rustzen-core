@@ -176,6 +176,8 @@ pub mod logging;
 pub mod role_policy;
 #[cfg(feature = "sqlite")]
 pub mod sqlite_maintenance;
+#[cfg(feature = "sqlite")]
+pub mod sqlite_query;
 
 #[cfg(feature = "sqlite")]
 pub mod sqlite {
@@ -451,6 +453,10 @@ pub use sqlite_maintenance::{
     SqliteMaintenancePlan, SqliteMaintenanceReport, SqlitePragmaSnapshot, WalCheckpointMode,
     WalCheckpointResult, run_sqlite_incremental_vacuum, run_sqlite_maintenance,
     run_sqlite_optimize, run_wal_checkpoint, sqlite_pragma_snapshot,
+};
+#[cfg(feature = "sqlite")]
+pub use sqlite_query::{
+    count_with_filters, fetch_with_filters, parse_optional_i16_filter, push_eq, push_ilike,
 };
 
 #[cfg(test)]
